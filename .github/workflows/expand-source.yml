@@ -1,6 +1,8 @@
 name: 展开已校验的发行源码
 on:
   workflow_dispatch:
+  push:
+    paths: [".github/workflows/expand-source.yml"]
 permissions:
   contents: write
 jobs:
