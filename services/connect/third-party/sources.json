@@ -1,0 +1,8 @@
+{
+  "repository": "https://github.com/coder/websocket",
+  "version": "v1.8.14",
+  "moduleSum": "h1:9L0p0iKiNOibykf283eHkKUHHrpG7f65OE3BhhO7v9g=",
+  "retrieved": "2026-11-23",
+  "license": "ISC",
+  "use": "复用既有构建缓存中的WebSocket实现"
+}

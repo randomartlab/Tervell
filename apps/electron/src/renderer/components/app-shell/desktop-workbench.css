@@ -1,0 +1,6 @@
+.desktop-workbench > .unified-navigation { position: relative; z-index: 60; flex: 0 0 auto; flex-direction: row; }
+.desktop-workbench > .unified-main { position: relative; z-index: 60; background: hsl(var(--background)); }
+.desktop-workbench > .unified-artifacts { position: relative; z-index: 60; }
+.desktop-workbench { --wb-border: hsl(var(--border)); --wb-muted: hsl(var(--muted-foreground)); --wb-primary: hsl(var(--primary)); --wb-soft: hsl(var(--primary) / .08); --wb-warning: hsl(var(--foreground)); }
+.desktop-skip-link { position: fixed; top: 8px; left: 96px; z-index: 110; transform: translateY(-200%); padding: 8px 12px; background: hsl(var(--background)); color: hsl(var(--foreground)); border: 2px solid hsl(var(--ring)); border-radius: 6px; }
+.desktop-skip-link:focus { transform: translateY(0); }

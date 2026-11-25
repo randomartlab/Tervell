@@ -1,0 +1,30 @@
+import { test, expect } from 'bun:test'
+import { AcpRunTimeline } from './timeline.ts'
+const event = (seq: number, text = String(seq), runId = 'r1') => ({ t: 'message.delta', runId, seq, index: 0, text })
+const wrap = (value: unknown, epoch = 1) => ({ sessionId: 's1', epoch, event: value })
+test('Given 乱序/重复/缺口 When 接收 Then 仅连续前缀被投影且洞区间精确', () => {
+  const timeline = new AcpRunTimeline('s1'); timeline.begin(1, 'r1')
+  expect(timeline.accept(wrap(event(3)))).toEqual([]); expect(timeline.accept(wrap(event(5)))).toEqual([])
+  expect(timeline.gaps()).toEqual([{ fromSeq: 1, toSeq: 2 }, { fromSeq: 4, toSeq: 4 }])
+  expect(timeline.accept(wrap(event(1))).map((item) => item.seq)).toEqual([1])
+  expect(timeline.accept(wrap(event(2))).map((item) => item.seq)).toEqual([2, 3])
+  expect(timeline.accept(wrap(event(3)))).toEqual([])
+  expect(() => timeline.accept(wrap(event(3, '冲突')))).toThrow('冲突')
+  expect(timeline.accept(wrap(event(4))).map((item) => item.seq)).toEqual([4, 5]); expect(timeline.gaps()).toEqual([])
+})
+test('Given 新run开始 When 旧epoch/旧run迟到 Then 丢弃且不污染新run', () => {
+  const timeline = new AcpRunTimeline('s1'); timeline.begin(1, 'r1'); timeline.begin(2, 'r2')
+  expect(timeline.accept(wrap(event(1), 1))).toEqual([])
+  expect(timeline.accept(wrap(event(1), 2))).toEqual([])
+  expect(timeline.accept(wrap(event(1, '新内容', 'r2'), 2))).toHaveLength(1)
+  expect(() => timeline.begin(2, 'r3')).toThrow('递增')
+  expect(() => timeline.accept(wrap(event(2, '', 'r2'), 3))).toThrow('epoch')
+})
+test('Given 终态/跨会话/超限 When 接收 Then 明确拒绝', () => {
+  const timeline = new AcpRunTimeline('s1', 1); timeline.begin(1, 'r1'); timeline.accept(wrap(event(3)))
+  expect(() => timeline.accept(wrap(event(4)))).toThrow('上限')
+  expect(() => timeline.accept({ ...wrap(event(1)), sessionId: 's2' })).toThrow('会话')
+  expect(() => timeline.accept(wrap({ t: 'done', runId: 'r1', seq: 2, reason: 'stop' }))).toThrow('更高序号')
+  const done = new AcpRunTimeline('s1'); done.begin(1, 'r1'); done.accept(wrap({ t: 'done', runId: 'r1', seq: 1, reason: 'stop' }))
+  expect(() => done.accept(wrap(event(2)))).toThrow('终态')
+})

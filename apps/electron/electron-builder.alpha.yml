@@ -1,0 +1,14 @@
+# Tervell 已定名的 Alpha 标识；默认无自动更新或发布。
+extends: ./electron-builder.yml
+appId: art.randomai.tervell.alpha
+productName: Tervell Alpha
+directories:
+  output: out/alpha
+extraMetadata:
+  promaReleaseChannel: alpha
+publish: null
+afterPack: ./scripts/sign-alpha-local.cjs
+mac:
+  artifactName: 'Tervell-Alpha-${version}-mac-${arch}.${ext}'
+  identity: null
+  notarize: false

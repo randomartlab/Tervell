@@ -1,0 +1,27 @@
+/* 自动生成：packages/shared/src/config/brand.ts 为唯一品牌色来源。 */
+:root {
+  --tervell-brand-mineral: #285c59;
+  --tervell-brand-mineral-hsl: 176.54 39.39% 25.88%;
+  --tervell-brand-mint: #a5cec4;
+  --tervell-brand-mint-hsl: 165.37 29.50% 72.75%;
+  --tervell-brand-paper: #f5f3ec;
+  --tervell-brand-paper-hsl: 46.67 31.03% 94.31%;
+  --tervell-brand-ink: #182523;
+  --tervell-brand-ink-hsl: 170.77 21.31% 11.96%;
+  --tervell-brand-light-primary: #285c59;
+  --tervell-brand-light-primary-hsl: 176.54 39.39% 25.88%;
+  --tervell-brand-light-foreground: #ffffff;
+  --tervell-brand-light-foreground-hsl: 0.00 0.00% 100.00%;
+  --tervell-brand-light-soft: #e3eeeb;
+  --tervell-brand-light-soft-hsl: 163.64 24.44% 91.18%;
+  --tervell-brand-light-hover: #214e4b;
+  --tervell-brand-light-hover-hsl: 176.00 40.54% 21.76%;
+  --tervell-brand-dark-primary: #a5cec4;
+  --tervell-brand-dark-primary-hsl: 165.37 29.50% 72.75%;
+  --tervell-brand-dark-foreground: #152d2b;
+  --tervell-brand-dark-foreground-hsl: 175.00 36.36% 12.94%;
+  --tervell-brand-dark-soft: #213c39;
+  --tervell-brand-dark-soft-hsl: 173.33 29.03% 18.24%;
+  --tervell-brand-dark-hover: #b8dbd2;
+  --tervell-brand-dark-hover-hsl: 164.57 32.71% 79.02%;
+}

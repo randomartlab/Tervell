@@ -1,0 +1,5 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": { "lib": ["ESNext", "DOM", "DOM.Iterable"], "types": ["bun", "node"] },
+  "include": ["visual-foundation.test.tsx", "../tests/visual-foundation.integration.test.ts", "../packages/shared/src/config/settings-navigation.test.ts", "../packages/shared/src/utils/mcp-form.test.ts", "../packages/shared/src/utils/skill-editor.test.ts"]
+}

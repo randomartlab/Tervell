@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "features": [
+    {
+      "id": "builtin-conversation-export",
+      "folder": "exporter",
+      "name": "会话导出",
+      "version": "0.1.1",
+      "description": "完整会话的 Markdown / JSON、预览、复制、保存及项目默认值。",
+      "digest": "9706a98a047b1869412bdf05cca3e7c93ba534fdab6e6fbeb8d54428c564e875"
+    },
+    {
+      "id": "builtin-better-conversation",
+      "folder": "better-paseo",
+      "name": "Better Conversation",
+      "version": "1.6.4",
+      "description": "增强时间线、任务看板、详情、查找及阅读设置。",
+      "digest": "e653f6b180838cd0d1b26f25d6e60a4a3b1483573b1cc343e0ee0f1943761301"
+    },
+    {
+      "id": "builtin-vivid-activity",
+      "folder": "vivid-activity",
+      "name": "Vivid Activity · 彩色活动",
+      "version": "0.11.1",
+      "description": "彩色实时推理、工具详情、步骤计时与过程折叠。",
+      "digest": "e23bc424f93f68319c17e89327d777a7bba3daa0e1a78f181e6100aea2df6271"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "name": "@proma/auth-bridge",
+  "version": "2.0.8",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./agent-routing": "./src/agent-routing.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@proma/protocol": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.9.0"
+  }
+}

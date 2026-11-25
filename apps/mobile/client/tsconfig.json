@@ -1,0 +1,39 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "types": [
+      "vite/client"
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "@tervell/plugin-runtime": [
+        "../../electron/src/renderer/lib/third-party/paseo-client/runtime.d.ts"
+      ],
+      "@tervell/plugin-driver": [
+        "../../electron/src/renderer/lib/third-party/paseo-client/driver.d.ts"
+      ],
+      "@tervell/plugin-api": [
+        "../../electron/src/renderer/lib/third-party/paseo-client/api.d.ts"
+      ],
+      "@tervell/native-layout-policy": [
+        "../../electron/src/renderer/components/plugins/native-timeline-policy.ts"
+      ]
+    }
+  },
+  "include": [
+    "src"
+  ]
+}

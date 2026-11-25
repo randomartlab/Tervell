@@ -1,0 +1,7 @@
+<resources>
+    <color name="brand_background">#285c59</color>
+    <color name="brand_foreground">#f5f3ec</color>
+    <color name="brand_fold">#a5cec4</color>
+    <color name="brand_accent">#285c59</color>
+    <color name="brand_chip">#e3eeeb</color>
+</resources>

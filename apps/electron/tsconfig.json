@@ -1,0 +1,29 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": [
+      "ESNext",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "@proma/tool-bridge": [
+        "../../packages/tool-bridge/src/index.ts"
+      ],
+      "@/*": [
+        "./src/renderer/*"
+      ],
+      "@/types/*": [
+        "./src/types/*"
+      ]
+    }
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "src/renderer/lib/third-party/**/*.js"
+  ]
+}

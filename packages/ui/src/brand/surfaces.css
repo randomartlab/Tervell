@@ -1,0 +1,47 @@
+/* 品牌表面使用固定品牌色；常规工作区和用户主题继续使用语义 token。 */
+@import './palette.css';
+
+.tervell-splash,
+.tervell-artwork {
+  background: var(--tervell-brand-mineral);
+  color: var(--tervell-brand-paper);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+.tervell-splash {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 48px 24px;
+}
+.tervell-splash-content { display: flex; flex-direction: column; align-items: center; }
+.tervell-splash-mark { width: 88px; height: 88px; margin-bottom: 24px; }
+.tervell-splash-mark path:nth-child(2),
+.tervell-artwork-mark path:nth-child(2) { fill: var(--tervell-brand-mint); opacity: 1; }
+.tervell-splash-name { margin: 0; font-size: 28px; font-weight: 500; letter-spacing: -.025em; line-height: 1.2; }
+.tervell-splash-slogan { max-width: 320px; margin: 16px 0 0; font-size: 15px; line-height: 1.6; opacity: .88; }
+.tervell-splash-progress { width: 120px; height: 2px; margin-top: 36px; overflow: hidden; background: color-mix(in srgb, var(--tervell-brand-mint) 25%, transparent); }
+.tervell-splash-progress::after { content: ''; display: block; height: 100%; width: 40%; background: var(--tervell-brand-mint); animation: tervell-loading 1.8s ease-in-out infinite; }
+.tervell-splash-status { margin: 16px 0 0; font-size: 13px; line-height: 1.5; opacity: .9; }
+.tervell-splash-footer { position: absolute; bottom: 32px; left: 24px; right: 24px; margin: 0; font-size: 10px; letter-spacing: .2em; line-height: 1.5; opacity: .72; }
+.tervell-artwork { display: flex; flex-direction: column; justify-content: space-between; min-height: 100%; padding: 36px 40px; }
+.tervell-artwork::before { content: ''; position: absolute; inset: 0 40px; border-inline: 1px solid color-mix(in srgb, var(--tervell-brand-mint) 16%, transparent); pointer-events: none; z-index: -1; }
+.tervell-artwork-lockup { display: inline-flex; align-items: center; gap: 12px; font-weight: 500; font-size: 20px; letter-spacing: -.025em; }
+.tervell-artwork-center { display: flex; flex: 1; min-height: 0; align-items: center; justify-content: center; padding: 48px 12px; }
+.tervell-artwork-mark { width: min(64%, 310px); height: auto; aspect-ratio: 1; }
+.tervell-artwork-message { margin: 0; max-width: 330px; font-size: clamp(21px, 2.3vw, 30px); font-weight: 400; letter-spacing: -.025em; line-height: 1.45; }
+.tervell-artwork-caption { margin: 16px 0 0; font-size: 11px; line-height: 1.5; letter-spacing: .16em; opacity: .76; }
+@keyframes tervell-loading { 50% { transform: translateX(150%); } }
+@media (max-width: 767px) {
+  .tervell-artwork { min-height: 0; padding: 24px; }
+  .tervell-artwork::before { inset-inline: 24px; }
+  .tervell-artwork-center { position: absolute; inset: 12px 12px 12px 50%; padding: 8px; opacity: .18; z-index: -1; }
+  .tervell-artwork-mark { height: 100%; width: auto; max-width: 100%; }
+  .tervell-artwork-message { margin-top: 36px; font-size: 22px; }
+  .tervell-artwork-caption { margin-top: 8px; }
+}
+@media (prefers-reduced-motion: reduce) { .tervell-splash-progress::after { animation: none; } }

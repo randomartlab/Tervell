@@ -1,0 +1,7 @@
+DeepSeek Harness original framework and UI sources. MIT license.
+Source: https://github.com/deepseek-ai/deepseek-harness
+Reference commit: 39163dd30f703a79079e2d2446545cff3c453738, obtained 2026-11-22.
+Original source files and SHA-256 hashes are recorded in sources.json.
+Client dependency archives are recorded in client-dependencies.json with exact versions and SHA-512 integrity. Their original licenses are included in licenses/.
+Generated bundles use the original Cordis Loader, tool registry, SlotRegistry and React slot renderer. Tervell supplies local host services and semantic UI placements.
+Original theme tokens are preserved with Tervell selector and semantic color bindings at build time.

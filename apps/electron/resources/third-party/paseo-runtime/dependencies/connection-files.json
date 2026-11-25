@@ -1,0 +1,809 @@
+{
+  "format": 1,
+  "files": [
+    {
+      "path": "@noble/ciphers/LICENSE",
+      "sha256": "f36671a5487c9c5050efacb58011c37c24c55a889803cb036cf9d9a6347c1e2d"
+    },
+    {
+      "path": "@noble/ciphers/README.md",
+      "sha256": "ec413a2eef2ff657eab6684761fd9da5256b4d309bccd60a8be55ae723d6a08b"
+    },
+    {
+      "path": "@noble/ciphers/_arx.d.ts",
+      "sha256": "b691fcdd72fe442f63c0597815e34ce9229c472cf2dd05fd0b1f4f49d2acb5a6"
+    },
+    {
+      "path": "@noble/ciphers/_arx.js",
+      "sha256": "ead142ba410404c0698bb80e0d6f77780799bb77a9e3b098cf0f9fca1c486e37"
+    },
+    {
+      "path": "@noble/ciphers/_poly1305.d.ts",
+      "sha256": "b4cdb53de27b1113e48406ebf6099f9f8a60ee1bfa4efb480b774c533e3279e9"
+    },
+    {
+      "path": "@noble/ciphers/_poly1305.js",
+      "sha256": "5d2afd73b40dbafb7b6740c6e6388e7123c79a4e57306861b28c5734925fa84d"
+    },
+    {
+      "path": "@noble/ciphers/_polyval.d.ts",
+      "sha256": "d16398b1d87f88d235a9ad738c00650d310d0b5f5800ed17aa2298bb75bc6889"
+    },
+    {
+      "path": "@noble/ciphers/_polyval.js",
+      "sha256": "735b078133e0c5a97dd984a21389f152dc7958b283f52504f6f0906ded243fa5"
+    },
+    {
+      "path": "@noble/ciphers/aes.d.ts",
+      "sha256": "0c880b005692cfbad9e11bb014f93a9993a3e0a23201f3de7b1f9a4230c69fdd"
+    },
+    {
+      "path": "@noble/ciphers/aes.js",
+      "sha256": "941ebefe14c48cd1401ffe52f329d4e6ff14f3f596681b211a33cde21de3a90c"
+    },
+    {
+      "path": "@noble/ciphers/chacha.d.ts",
+      "sha256": "77b2c37def5c4cc19525846d6ba9d3cd7b0e4260e2e6304cd48532c42c4bafbf"
+    },
+    {
+      "path": "@noble/ciphers/chacha.js",
+      "sha256": "5f1c00575e227b75163f4bac50b79442dec50ee3047c46c18887808ba8af0a69"
+    },
+    {
+      "path": "@noble/ciphers/ff1.d.ts",
+      "sha256": "dc7fa8cd8a07cf8479e27fea7c78e7c0eba0d8596f5cebbb65383dbb4a2aa34e"
+    },
+    {
+      "path": "@noble/ciphers/ff1.js",
+      "sha256": "57926aee0390bf90c9e17afb99e4252a78404ff5616225155fdb9da6e6696173"
+    },
+    {
+      "path": "@noble/ciphers/index.d.ts",
+      "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881"
+    },
+    {
+      "path": "@noble/ciphers/index.js",
+      "sha256": "3596db3a20788335e58d84083650c96ad37e968eab17fc55b084036b28cff14e"
+    },
+    {
+      "path": "@noble/ciphers/package.json",
+      "sha256": "feb7f2751f467dbde186fbcbaa7512ca0fe4c30bd0429e9e276d0c186357697b"
+    },
+    {
+      "path": "@noble/ciphers/salsa.d.ts",
+      "sha256": "6af6b93b373a971b909e8208cba48a10338bdcbe97843fb559d7a001f3d919f7"
+    },
+    {
+      "path": "@noble/ciphers/salsa.js",
+      "sha256": "c5a3d72861d5793ab756476696b540aeffefbaebe6a219ba4fba19c0c5fd5b95"
+    },
+    {
+      "path": "@noble/ciphers/src/_arx.ts",
+      "sha256": "df9f7ba70b821b80283ccc6e094fda939c407f68309bf5ab2acb966a7aee510f"
+    },
+    {
+      "path": "@noble/ciphers/src/_poly1305.ts",
+      "sha256": "6fbeeb5e4175c6171ad33d935edce126b5cd2e7f937f7a72bc7863ebb042e2d6"
+    },
+    {
+      "path": "@noble/ciphers/src/_polyval.ts",
+      "sha256": "0d6e9198b8a43834453f1d266b74db36f21305e41a92bdd7a02e7d476ce967b8"
+    },
+    {
+      "path": "@noble/ciphers/src/aes.ts",
+      "sha256": "42da3622e5c970895e4987e3dc77223f94ef663c8ccc8018e714a3c48da134be"
+    },
+    {
+      "path": "@noble/ciphers/src/chacha.ts",
+      "sha256": "7984c334713cb7f395987bab74f931af44ee1d6badaf386d61ad156fdf27dbcd"
+    },
+    {
+      "path": "@noble/ciphers/src/ff1.ts",
+      "sha256": "3548f5dc26550ba3ec9f4153dfb1b9789d5751fed662ff351bcb1aaa2562f5e3"
+    },
+    {
+      "path": "@noble/ciphers/src/index.ts",
+      "sha256": "7f0a1638598b9bff44aa83009a01fcf6a077c8406c6b0afbf80444d49edb66e9"
+    },
+    {
+      "path": "@noble/ciphers/src/salsa.ts",
+      "sha256": "8af0f44a5e335fdc59925003ddb648e6ae01988ab329f883e30c8d4c8eb81787"
+    },
+    {
+      "path": "@noble/ciphers/src/utils.ts",
+      "sha256": "527c22e71c909f702c53479682f30d690a8c4a244b4372b9485a2d9c231614c1"
+    },
+    {
+      "path": "@noble/ciphers/src/webcrypto.ts",
+      "sha256": "a3d6d704b1e76ae6c46154082e2d6769c5ea58671c81df1b28d7fc6aca7b93ba"
+    },
+    {
+      "path": "@noble/ciphers/utils.d.ts",
+      "sha256": "d66bfae801c1831c32897b48d79f739523da3923fddd9c30cc738a761fefcc82"
+    },
+    {
+      "path": "@noble/ciphers/utils.js",
+      "sha256": "a443ec1f60d1aaa25d1b7d8c102d33c0e8e6d683ada1ad17be9c32e69170ff95"
+    },
+    {
+      "path": "@noble/ciphers/webcrypto.d.ts",
+      "sha256": "866f0aad02da0f38470bf1914a785355575ae777f27dc780c1165e3f561a13b6"
+    },
+    {
+      "path": "@noble/ciphers/webcrypto.js",
+      "sha256": "fdef4e9a899fdd81c035d070cfefacc6971c54404864bd6332ad48889d1f5600"
+    },
+    {
+      "path": "@noble/curves/LICENSE",
+      "sha256": "4f221aee6e072336700c408c68ab3b96a3fc09f6aebe6f48f1bd99e5ef13faec"
+    },
+    {
+      "path": "@noble/curves/README.md",
+      "sha256": "5d7a7d4811d1e09a6fc7c1b7e3716453875fc214d2c132a8ee5fcca1fb928a1d"
+    },
+    {
+      "path": "@noble/curves/abstract/bls.d.ts",
+      "sha256": "6793f0e4fa33c028a109ebf71d69548235551a8686ac881fd5afce07ca8968f3"
+    },
+    {
+      "path": "@noble/curves/abstract/bls.js",
+      "sha256": "9bc37d55fbf294ef99d944950eb58ab5b0330e27aa9dacf73f557a7b88e8930f"
+    },
+    {
+      "path": "@noble/curves/abstract/curve.d.ts",
+      "sha256": "933792b8c0e73b795ec3a97c69a7f8a506fd37f9fecc54135bbb1a796b9a8aff"
+    },
+    {
+      "path": "@noble/curves/abstract/curve.js",
+      "sha256": "dbaeee3b41ff47efb76b78e14170fe4dda7c7ecdc387c402f16c5118e0bac356"
+    },
+    {
+      "path": "@noble/curves/abstract/der.d.ts",
+      "sha256": "aeb2852ac61843a00031867fcb9d4932c4b70f77d9fbafaaa4e6d19d2aa6f8b2"
+    },
+    {
+      "path": "@noble/curves/abstract/der.js",
+      "sha256": "7f80d698611b131368ecf732b8740bb97f72cd42fef77c4b0bb923e2e2d44159"
+    },
+    {
+      "path": "@noble/curves/abstract/edwards.d.ts",
+      "sha256": "217506fe30ac0b6995cbb92d50da92d3e31a54f2eaba2f7c76d2d54bbda5aa40"
+    },
+    {
+      "path": "@noble/curves/abstract/edwards.js",
+      "sha256": "f24a9c221a549a8fff259eb8f245ab0dc17679b13c532c3970d91acc4df9fffd"
+    },
+    {
+      "path": "@noble/curves/abstract/fft.d.ts",
+      "sha256": "6a16cb899142d2cb3ac866075a70c0edb28286b30e47ed6e4c35ecf54e668e86"
+    },
+    {
+      "path": "@noble/curves/abstract/fft.js",
+      "sha256": "a4b2ff7ca33f4acc85d61f0e83ec3303c3f6b38ecc19b20d0f6462d820e518cf"
+    },
+    {
+      "path": "@noble/curves/abstract/frost.d.ts",
+      "sha256": "1633a15d2aea0a21395f08e1f5c5bffb4ae54c3bb01129d50a5ce582b7e0a550"
+    },
+    {
+      "path": "@noble/curves/abstract/frost.js",
+      "sha256": "9a95f1fdf7e17b9d93a16049db675ee2967ed2a04cf59b1bd981d4662acbedf5"
+    },
+    {
+      "path": "@noble/curves/abstract/hash-to-curve.d.ts",
+      "sha256": "7359426621285a51c071954edf1e090ecfa7de975c7fa7a8835f246b2f4abda5"
+    },
+    {
+      "path": "@noble/curves/abstract/hash-to-curve.js",
+      "sha256": "e3c97e7d0827b728b14e3311ed11d8e386d8a70d8fc77e0b9fd2a3090f19d955"
+    },
+    {
+      "path": "@noble/curves/abstract/modular.d.ts",
+      "sha256": "e8203a44185131417db537c76874dd5284874ece85905360e7ffb5d37553ec8c"
+    },
+    {
+      "path": "@noble/curves/abstract/modular.js",
+      "sha256": "9ced3aa10598277a735e54f7b61d88e929d565da884ba5385f9006ebb3b6aab2"
+    },
+    {
+      "path": "@noble/curves/abstract/montgomery.d.ts",
+      "sha256": "35218eb55a0bc7b20c0ff79122079f08ca76673336535b6f86e694a93abdf882"
+    },
+    {
+      "path": "@noble/curves/abstract/montgomery.js",
+      "sha256": "cdafa8816dad5a24475ec51952c5f71fdd5d1b46880ab982694c4f8ff605fc46"
+    },
+    {
+      "path": "@noble/curves/abstract/oprf.d.ts",
+      "sha256": "8db613317b8a340a7e427d23e6daf90848ad4c4e1444e9c62ad261348096f0b8"
+    },
+    {
+      "path": "@noble/curves/abstract/oprf.js",
+      "sha256": "2ca36b3e4930092db1f91559410e86975816c036e248067bc65a8055aa1c504c"
+    },
+    {
+      "path": "@noble/curves/abstract/poseidon.d.ts",
+      "sha256": "c14cd1a7a75b7021af495fc0aa5e13b45b988223088e86e7c5fae1d54103a851"
+    },
+    {
+      "path": "@noble/curves/abstract/poseidon.js",
+      "sha256": "ef05eaf0372d4441abfdcacd31b9a7bea801656b55819cdf0ff0995aa0c885fb"
+    },
+    {
+      "path": "@noble/curves/abstract/tower.d.ts",
+      "sha256": "5b003308d621557fbb698fca6dbeda3b8cc937305ffb62ddf59ad6b5bf5a6615"
+    },
+    {
+      "path": "@noble/curves/abstract/tower.js",
+      "sha256": "6e9f7273af53c06f8124c33b89d0d70d7d46e95effbf46d242e580e9c5aa8137"
+    },
+    {
+      "path": "@noble/curves/abstract/weierstrass.d.ts",
+      "sha256": "7556bbf494d8a79a28ab453d0d8abb19fdcd9c3460034bb8c66af1448320e5e4"
+    },
+    {
+      "path": "@noble/curves/abstract/weierstrass.js",
+      "sha256": "d007e949c0d5b912e8c54132983219c8ff8f69bda058a70563b5cc7a8783331c"
+    },
+    {
+      "path": "@noble/curves/bls12-381.d.ts",
+      "sha256": "e2d19f92a28d68004eeba82ff5b9f30ee208ecff110e23f32587e0328b45f442"
+    },
+    {
+      "path": "@noble/curves/bls12-381.js",
+      "sha256": "eab0e80c31087656d0a0c2024906418e59ab6e2f02c9e5395406602c25351276"
+    },
+    {
+      "path": "@noble/curves/bn254.d.ts",
+      "sha256": "7d377b3ecf3844477bbc4417dd827dca754f92f93358917b772afb9297af28bc"
+    },
+    {
+      "path": "@noble/curves/bn254.js",
+      "sha256": "d49bd6594b30d11c949eff8a3de54a46e2ca3ae93c964b576c6c0b51c80a6785"
+    },
+    {
+      "path": "@noble/curves/ed25519.d.ts",
+      "sha256": "32ec9ba9353005bc601af7acc62b87a304d356f835306d905fbec4440da39afb"
+    },
+    {
+      "path": "@noble/curves/ed25519.js",
+      "sha256": "e13f6c50c36feb0d18bf7986d5f881bcefb5f1f5b16de3cc5ee7693254c7a0b5"
+    },
+    {
+      "path": "@noble/curves/ed448.d.ts",
+      "sha256": "20a8d03b2d0be13f399cbbc7bf56bba571418a7fb47bfe3f11ac1d7b5bcdb136"
+    },
+    {
+      "path": "@noble/curves/ed448.js",
+      "sha256": "a56f9673b2b207bdc196654c2116bfae6c9782464d3d53274a015e0e0a7ed75c"
+    },
+    {
+      "path": "@noble/curves/index.d.ts",
+      "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881"
+    },
+    {
+      "path": "@noble/curves/index.js",
+      "sha256": "522bba9559e747647426316ac2b9df593243c4d54cd6852c54206f4124a8f7b9"
+    },
+    {
+      "path": "@noble/curves/misc.d.ts",
+      "sha256": "0b25724c5cd37368b400811194ba4af73f588cbeadf4604769aef1b29858d0dd"
+    },
+    {
+      "path": "@noble/curves/misc.js",
+      "sha256": "2db54e6ade644c4c1371903b7c88e2b77093fd3b1012d42b0a18258d1c09096d"
+    },
+    {
+      "path": "@noble/curves/nist.d.ts",
+      "sha256": "2ccdb34a144602991c78920a5a3e8c33b73e3ec3a3bec710a95082ba15deadec"
+    },
+    {
+      "path": "@noble/curves/nist.js",
+      "sha256": "0a692b98e22c56c0354f78eb1759cfbf6aec89eafc78cd2984a4f2e8428081e6"
+    },
+    {
+      "path": "@noble/curves/package.json",
+      "sha256": "63d976a6ee72f2dcdc81e6c8bf907edff54eb20e8423218578fbfaf29cff96e6"
+    },
+    {
+      "path": "@noble/curves/secp256k1.d.ts",
+      "sha256": "b38629ceef71dff29b10613ecf7e256992b50bb5240f9045281a9f85eaaa1376"
+    },
+    {
+      "path": "@noble/curves/secp256k1.js",
+      "sha256": "b4e7383e0de5064cd200d22f21890bc8730ddaf987b1e989e5e24bbfaae5cf1f"
+    },
+    {
+      "path": "@noble/curves/src/abstract/bls.ts",
+      "sha256": "b7e80754e25a574698b256524d39012c764ec2b1c544fe77cf6bf88fce05146b"
+    },
+    {
+      "path": "@noble/curves/src/abstract/curve.ts",
+      "sha256": "1e234b2d66ad82f1b0edd551b379759d9b0d23db377ee3435cba613ddb1bda81"
+    },
+    {
+      "path": "@noble/curves/src/abstract/der.ts",
+      "sha256": "d67ad7adeb206a490613348a03fb2003ef343a897bad29f858658e1bb6149506"
+    },
+    {
+      "path": "@noble/curves/src/abstract/edwards.ts",
+      "sha256": "1495abd992c174cfe7755228242a8e601ff58f4c41b424063c824f66fabf7c81"
+    },
+    {
+      "path": "@noble/curves/src/abstract/fft.ts",
+      "sha256": "bcdf6b4e84ac24d94f32eb4b99e7404a6c5f1687835396ae7e2ad8ee2cf4b1ad"
+    },
+    {
+      "path": "@noble/curves/src/abstract/frost.ts",
+      "sha256": "3bf0a0f4d0ed6d7a41cc5ae5d76d165a7655e89de3e8f50a14cf8294f188cc56"
+    },
+    {
+      "path": "@noble/curves/src/abstract/hash-to-curve.ts",
+      "sha256": "6ecf9cea9fb4fdff3da5323408bc8e4ad21c84f493eb6d8541d99d5a4eee8526"
+    },
+    {
+      "path": "@noble/curves/src/abstract/modular.ts",
+      "sha256": "a369965c957400e86775a946e873fcd13efb1c4936afcd6c40ad22289645e111"
+    },
+    {
+      "path": "@noble/curves/src/abstract/montgomery.ts",
+      "sha256": "8327e278df009b4e09663b8a7fad443232f248ac40fc0d83b4365c483415ec29"
+    },
+    {
+      "path": "@noble/curves/src/abstract/oprf.ts",
+      "sha256": "1764b2f56d45b447fc2a66ecddc0b07afb62a26c1967c9e7d2dcc44a682e5e68"
+    },
+    {
+      "path": "@noble/curves/src/abstract/poseidon.ts",
+      "sha256": "2cae030d62686b13482ccea0a4cedbce6c369ca2fc6031cf2bdad9ace030c4c4"
+    },
+    {
+      "path": "@noble/curves/src/abstract/tower.ts",
+      "sha256": "aea994d732da1552a7003553ab9ace8b3f179f4f80ad72ee5a36f45fb3918124"
+    },
+    {
+      "path": "@noble/curves/src/abstract/weierstrass.ts",
+      "sha256": "ccaa0ec1e5b8682ae1984afcf2d62faeb20d61631e3d3b564224d62fb0e9504c"
+    },
+    {
+      "path": "@noble/curves/src/bls12-381.ts",
+      "sha256": "a289524874e8fddced06f88a19d83f0115251076981e55a4e496a4df15f16f95"
+    },
+    {
+      "path": "@noble/curves/src/bn254.ts",
+      "sha256": "8ad90dde78c9447eb27a12dc0f89f9747099c36e50d8d306fb7a7c05712ff788"
+    },
+    {
+      "path": "@noble/curves/src/ed25519.ts",
+      "sha256": "16cf1b94d477b9930f9db29d89ef2a57db65a6bcfadb65c90ac8aa658f69ea82"
+    },
+    {
+      "path": "@noble/curves/src/ed448.ts",
+      "sha256": "d96c872eb65fbcca966d25f1d07b924215694f152bd2b3764bc62195bcc53490"
+    },
+    {
+      "path": "@noble/curves/src/index.ts",
+      "sha256": "b32a7b257dc52b0f4974f437854c82166ab97b211b1556785bb6624184c75210"
+    },
+    {
+      "path": "@noble/curves/src/misc.ts",
+      "sha256": "160f95002f5ed86feefaab4711f5c80385cdd7d0c446501143d3c23a04f28430"
+    },
+    {
+      "path": "@noble/curves/src/nist.ts",
+      "sha256": "372513e7e6b79af0081cef20d25ba77942d201fb64ba4444fafeb9c84c282215"
+    },
+    {
+      "path": "@noble/curves/src/secp256k1.ts",
+      "sha256": "f474017df70d47f2c1afa0798a5be4c20315506d1cc86090c8d60df94f5e70fb"
+    },
+    {
+      "path": "@noble/curves/src/utils.ts",
+      "sha256": "76a892c19902f11aa49a35b9d81c3ca79e961004b892928dce656a87e07f5d83"
+    },
+    {
+      "path": "@noble/curves/src/webcrypto.ts",
+      "sha256": "a471437fe915d058262a05a6220a13debc2f4600be05af025744cf35822950d6"
+    },
+    {
+      "path": "@noble/curves/utils.d.ts",
+      "sha256": "7c6a14fb7160cb98f63c928ac39dc544a33be6e0bf51d31fe443f4c2a4d92598"
+    },
+    {
+      "path": "@noble/curves/utils.js",
+      "sha256": "be9ff86aef76419376e4d66cf01a134f3117f1f8dd62d81f1b79100145503367"
+    },
+    {
+      "path": "@noble/curves/webcrypto.d.ts",
+      "sha256": "2ed5ce94d185be6027cb758c61d30b753fa008e42cb6e2f73a6a09397852816a"
+    },
+    {
+      "path": "@noble/curves/webcrypto.js",
+      "sha256": "715197e17767f7f448eb4131151205e18ee0a261d76340cf4863805e15737f0e"
+    },
+    {
+      "path": "@noble/hashes/LICENSE",
+      "sha256": "4f221aee6e072336700c408c68ab3b96a3fc09f6aebe6f48f1bd99e5ef13faec"
+    },
+    {
+      "path": "@noble/hashes/README.md",
+      "sha256": "668a613b90e2d867df4f8d610566e4a874d6e33f799d9770714a26702c6d7dd0"
+    },
+    {
+      "path": "@noble/hashes/_blake.d.ts",
+      "sha256": "c32b86abfcd4514e98a2f27b4f67672cb1446ac081d2e715d0dca60e96e8120a"
+    },
+    {
+      "path": "@noble/hashes/_blake.js",
+      "sha256": "cabbff61d1f373bac45594ad758df7c42e176464ddbb94b44f5533fa977a4f56"
+    },
+    {
+      "path": "@noble/hashes/_md.d.ts",
+      "sha256": "f5ffc0d52997445b4531a0e1e67ee0f6f376e0ed5c66f978e80288973d50cd06"
+    },
+    {
+      "path": "@noble/hashes/_md.js",
+      "sha256": "60cf3010fda89e3e4d3f0e7ff1ce249e9c467f34b4fd41b6fd6101d9f69be763"
+    },
+    {
+      "path": "@noble/hashes/_u64.d.ts",
+      "sha256": "78744410de5b7594879963d315b7a339a06ecafa73b0a0ddf63fdabdb926dd25"
+    },
+    {
+      "path": "@noble/hashes/_u64.js",
+      "sha256": "b09da8c07fe8187c07649494cdb7cd0bcf13df90b506a9473d19e4d5f8c2e102"
+    },
+    {
+      "path": "@noble/hashes/argon2.d.ts",
+      "sha256": "a455841ea6f034d54790094ac67afc9311a78a39abb967009a605c37122c03d9"
+    },
+    {
+      "path": "@noble/hashes/argon2.js",
+      "sha256": "f39753324bdf2f484150731d24b1d71236f26bf10bedd594f7d190fcdfdefdc9"
+    },
+    {
+      "path": "@noble/hashes/blake1.d.ts",
+      "sha256": "f1cc242d614865d7277362ba8a90b58f755aae260881be79e0119ce85a1f6017"
+    },
+    {
+      "path": "@noble/hashes/blake1.js",
+      "sha256": "da1d08b4d0702ad4f185a796df8fce3fec2855de53b02190eba3bd8555677b5c"
+    },
+    {
+      "path": "@noble/hashes/blake2.d.ts",
+      "sha256": "e60ec6813a51e31751919e471daedaab9510d7a88dc0ef6b4dc05c7de502736e"
+    },
+    {
+      "path": "@noble/hashes/blake2.js",
+      "sha256": "03f00237bcc0b4d822a80f7c0ac22e42632c48e246c3b6da584e6452186e32f0"
+    },
+    {
+      "path": "@noble/hashes/blake3.d.ts",
+      "sha256": "b9a9fdcc7b04f07674c609fa40b0fdf1252c3ccf024968038fff06e6da00c627"
+    },
+    {
+      "path": "@noble/hashes/blake3.js",
+      "sha256": "bc25a8f6c50acabf3781c44ec55cb364b00f6f3f4349d841813a1057a8af2f20"
+    },
+    {
+      "path": "@noble/hashes/eskdf.d.ts",
+      "sha256": "d5f8b356eb63754539034e40c22ef45e58af9eb51e121ed7ef1c757eb47f7fe7"
+    },
+    {
+      "path": "@noble/hashes/eskdf.js",
+      "sha256": "7ded32d320b0d1d71c59a4a3b493722a13c9c6a66de83f19f8a382b29af7a2f6"
+    },
+    {
+      "path": "@noble/hashes/hkdf.d.ts",
+      "sha256": "b31b80e958e55dcff73eebfed1061ab4a49ef5cadc2fca1cf0999e1dd06f2786"
+    },
+    {
+      "path": "@noble/hashes/hkdf.js",
+      "sha256": "ccb942a8008f974018965eeb1e33b8f4739bf767c6f95f2ceb06f5873a302f67"
+    },
+    {
+      "path": "@noble/hashes/hmac.d.ts",
+      "sha256": "e98501df98e30aadc27a2fac0c725b7755bb297ed8f722b4d9edbad0a52eabce"
+    },
+    {
+      "path": "@noble/hashes/hmac.js",
+      "sha256": "fec9f8f3aeda785ea2de91cc4c059d54ef98196261c026c43f48341007ae52c9"
+    },
+    {
+      "path": "@noble/hashes/index.d.ts",
+      "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881"
+    },
+    {
+      "path": "@noble/hashes/index.js",
+      "sha256": "b0d908a44e09a1b7c27a43d7b9036a6147a7a32db758bb64d9a668ea5c72d1af"
+    },
+    {
+      "path": "@noble/hashes/legacy.d.ts",
+      "sha256": "efea3066bab29b907291bb209c8e0ebf33aa7c7de7e284debdf70800ef0c7cfa"
+    },
+    {
+      "path": "@noble/hashes/legacy.js",
+      "sha256": "690553a41af2fdd1e32ff6b534ba8508e95f1861c09c2d62fe762b6b501e09be"
+    },
+    {
+      "path": "@noble/hashes/package.json",
+      "sha256": "3e361734f5269de162fa362483d7f45dee7efb533ec217157945338f7591baaf"
+    },
+    {
+      "path": "@noble/hashes/pbkdf2.d.ts",
+      "sha256": "5e992532a48c56c72d23a01491702f259637fe7d14bb13cea7ce731d74aea9d2"
+    },
+    {
+      "path": "@noble/hashes/pbkdf2.js",
+      "sha256": "62b75b5465a89af052a80bdebe7e0383ba01648b12f64877ce285a2e9896c713"
+    },
+    {
+      "path": "@noble/hashes/scrypt.d.ts",
+      "sha256": "f3b2a890f8b6564a0f4c8fd3dc80f443501cdd8f4dd18760d472773923329902"
+    },
+    {
+      "path": "@noble/hashes/scrypt.js",
+      "sha256": "a38a020620776fa5c57c00f151bdc1033c192827c9d841996daaf29122ea82c1"
+    },
+    {
+      "path": "@noble/hashes/sha2.d.ts",
+      "sha256": "5b1c09cb23f0c1e7018d31d28f4eec2b18eec6454f07c0f69ff2eb3c8decdb21"
+    },
+    {
+      "path": "@noble/hashes/sha2.js",
+      "sha256": "471746bba6ec4c6238ca41358d1d3b40b6ff31cf3363f0b4d550c649c1a8e83b"
+    },
+    {
+      "path": "@noble/hashes/sha3-addons.d.ts",
+      "sha256": "2d838c7d9eaa1e89d8cc45e894ef92cdf7db60bf9bd2eb04b89e2570510fcf47"
+    },
+    {
+      "path": "@noble/hashes/sha3-addons.js",
+      "sha256": "e979866a213955afba24c105966bc42afa5d1377d77fe1017dea29a958fddcb7"
+    },
+    {
+      "path": "@noble/hashes/sha3.d.ts",
+      "sha256": "6f8d601930e11339441fffbaec65a66c76d62c5c62b91c49230d64e75fa6457a"
+    },
+    {
+      "path": "@noble/hashes/sha3.js",
+      "sha256": "9a81e1edb24eae27b335533220167609cfb58008c5690e140ce478acdc669f32"
+    },
+    {
+      "path": "@noble/hashes/src/_blake.ts",
+      "sha256": "9eda40c7520d7ccaabf7accca24225ba6bac9ca7b1b7486fc960e15870af1f97"
+    },
+    {
+      "path": "@noble/hashes/src/_md.ts",
+      "sha256": "d469c5ca7f638b0ec14df23acd9e631f7f04592bfb8cdd7a13918f178ebeb19d"
+    },
+    {
+      "path": "@noble/hashes/src/_u64.ts",
+      "sha256": "3dd3e0a061dfedf2fd3a0c622e746b2927c141dcde8045e5f7cbc5df0b758a74"
+    },
+    {
+      "path": "@noble/hashes/src/argon2.ts",
+      "sha256": "6672b2cca5a86f7b3d9c9de75d2d12bf4fea8711fa7f43dcf185d8033839795d"
+    },
+    {
+      "path": "@noble/hashes/src/blake1.ts",
+      "sha256": "a4864dcddbfe4e03df638463339d953aca3cb0995ae0b498d1dd3ecc7d50bdb7"
+    },
+    {
+      "path": "@noble/hashes/src/blake2.ts",
+      "sha256": "edee1cce752a6e86cea251f11282adb34b5bb8e20e023d317849bbc2920a38ad"
+    },
+    {
+      "path": "@noble/hashes/src/blake3.ts",
+      "sha256": "7d7f9432a069cdb05516549091344d525a2762ea698993f5e05f7180ed3aa873"
+    },
+    {
+      "path": "@noble/hashes/src/eskdf.ts",
+      "sha256": "fc953318a9f6cc95eced18543f29022a2a1da81795aa63622299180ce37de579"
+    },
+    {
+      "path": "@noble/hashes/src/hkdf.ts",
+      "sha256": "0f145497126d9943373c6830d8c67f91f177bf9827bc18e99149909315186423"
+    },
+    {
+      "path": "@noble/hashes/src/hmac.ts",
+      "sha256": "74a1ac9f74e3cb97076665c6deada914c3b8e3d645fc65e7e64b71b6d43728fe"
+    },
+    {
+      "path": "@noble/hashes/src/index.ts",
+      "sha256": "9f2034ab7b5c452fd7b2b9df6ec7ef0266830cd11f05908e9f5e862993a19c30"
+    },
+    {
+      "path": "@noble/hashes/src/legacy.ts",
+      "sha256": "2bacb7fed94e9d0c33d98313bf764989d9d9c23c2fa13d8f7f5ad5a4fea4751f"
+    },
+    {
+      "path": "@noble/hashes/src/pbkdf2.ts",
+      "sha256": "1a6230a1c1b18a090601667b28b32b2b7843dfb80539bd33d9be5bb3d20d23ca"
+    },
+    {
+      "path": "@noble/hashes/src/scrypt.ts",
+      "sha256": "5f03c5bef264a42f413d199bbee69918f6ca8828be8f2e9f710143043b662b80"
+    },
+    {
+      "path": "@noble/hashes/src/sha2.ts",
+      "sha256": "27447d36015d30a97dbe68a08978af65094208ba6f093d9197785105d95c20bc"
+    },
+    {
+      "path": "@noble/hashes/src/sha3-addons.ts",
+      "sha256": "8f0ed953b9194fa0b0f6164ab02d33ee78f491fc2b264876a3e4080522bc55ce"
+    },
+    {
+      "path": "@noble/hashes/src/sha3.ts",
+      "sha256": "a4a94b8b6755466a6972a3ab7816ec8cb2cabc013c1f4107dd09f235b4815415"
+    },
+    {
+      "path": "@noble/hashes/src/utils.ts",
+      "sha256": "df2e7c132fb6c451c792dd32dc8a7643de449bcb7782f50fd23664696fbc5962"
+    },
+    {
+      "path": "@noble/hashes/src/webcrypto.ts",
+      "sha256": "799203593e71f7658d2a6aa7863ac082eee1b725024630e300669c7770378628"
+    },
+    {
+      "path": "@noble/hashes/utils.d.ts",
+      "sha256": "cfccade8c719b698bd8b0313ff996941f5d5a384654ec2886d9141224f6db439"
+    },
+    {
+      "path": "@noble/hashes/utils.js",
+      "sha256": "037ad49adb78168b6b699598fd33f85f7877456b1d28b4d032e2a1a16807947c"
+    },
+    {
+      "path": "@noble/hashes/webcrypto.d.ts",
+      "sha256": "e56b2ea68f6b6b21e14ed99b2520bc754ac900c178d23fe7d6d451ae2a7d12c8"
+    },
+    {
+      "path": "@noble/hashes/webcrypto.js",
+      "sha256": "83f476a634233b999ce6e6cd67dc03e64f07b8d5a826e67ad4a50c940d9ce7ee"
+    },
+    {
+      "path": "base64-js/LICENSE",
+      "sha256": "5b37224c080cdcc97c871ada971c224e9926370fe74f11b539aa1cf9f3b1aca1"
+    },
+    {
+      "path": "base64-js/README.md",
+      "sha256": "057ef3ae4f4b4c9d3dcd257d3b2f38632de3c3a2ff068e5be14cb56a61d6daba"
+    },
+    {
+      "path": "base64-js/base64js.min.js",
+      "sha256": "d2e82495607abf54f16e21de04d90ba9ce1605451667d88425babece988f148b"
+    },
+    {
+      "path": "base64-js/index.d.ts",
+      "sha256": "96da6c81cd788939a7cf6546ea1f65ab5ca38952e5bd7d8c284bfe1f3c22dce7"
+    },
+    {
+      "path": "base64-js/index.js",
+      "sha256": "829eadd8a1a441d25be0cb93b00e16a0d0c20fd294db95d8f2ed87e6954b7182"
+    },
+    {
+      "path": "base64-js/package.json",
+      "sha256": "9758f3ab8c45e07bb9a368e32f9a8b3729623bbf47cbbb205b32d674ab2a91f0"
+    },
+    {
+      "path": "tweetnacl/AUTHORS.md",
+      "sha256": "64062ae412dbb0bcbec2ff3066d379d9d5656ea18bd3035d642436b1321fe117"
+    },
+    {
+      "path": "tweetnacl/CHANGELOG.md",
+      "sha256": "a0ead7f5541032b16acb98b424da847a69d977949420e74217289c4831ff9a55"
+    },
+    {
+      "path": "tweetnacl/LICENSE",
+      "sha256": "88d9b4eb60579c191ec391ca04c16130572d7eedc4a86daa58bf28c6e14c9bcd"
+    },
+    {
+      "path": "tweetnacl/PULL_REQUEST_TEMPLATE.md",
+      "sha256": "65fe41cbd990b3dd0f7062a6052b8876e221b29e1ed12eac186bf87436e244cb"
+    },
+    {
+      "path": "tweetnacl/README.md",
+      "sha256": "4a92b48b93f13112f0105e99ff72eb917a83789c4f32db7e2e04436782bf8b82"
+    },
+    {
+      "path": "tweetnacl/nacl-fast.js",
+      "sha256": "6bcd37a3b20dce913f82d4b23e4e2b661058b4b953df8a3f8c45d56ac4f72447"
+    },
+    {
+      "path": "tweetnacl/nacl-fast.min.js",
+      "sha256": "3ec535c004aeeb225785d8e93fb33bf99f52e399bd7dfc01969b5629baea5131"
+    },
+    {
+      "path": "tweetnacl/nacl.d.ts",
+      "sha256": "60592f5ae1b739c9607a99895d4a3ad5c865b16903e4180e50b256e360a4a104"
+    },
+    {
+      "path": "tweetnacl/nacl.js",
+      "sha256": "2555523ab79e980c7aec94aaf6c80e3c120fba04e9c4a95ab9faa7878602380e"
+    },
+    {
+      "path": "tweetnacl/nacl.min.js",
+      "sha256": "973cc5733cc7432e30ee4682098f413094f494bccf76a567c23908c5035ddbbc"
+    },
+    {
+      "path": "tweetnacl/package.json",
+      "sha256": "929dc634f6c254c5881612db9a4c52e2ef16cc1b3e3da3343b9e31e6cf037448"
+    },
+    {
+      "path": "ws/LICENSE",
+      "sha256": "2b29dcfe0d6471f7e8c92c5fb38c9f93edee10330937055440192f1832b1ecef"
+    },
+    {
+      "path": "ws/README.md",
+      "sha256": "bb979132f3cbff08ce47f36d041e18071f8f534d01f591c0b129ba7abf1e480e"
+    },
+    {
+      "path": "ws/browser.js",
+      "sha256": "010da44addea1d88b2b732540c3f1fd0cbcb28926b96623d4c64222e0ead2d0e"
+    },
+    {
+      "path": "ws/index.js",
+      "sha256": "924564d5be26d59b9682c4263f68320e48dde7240bd2d1ad17ec305537429dd2"
+    },
+    {
+      "path": "ws/lib/buffer-util.js",
+      "sha256": "8b0a45739132f82e25ea13163780abf547ccfe989267f3eb7abb475beec92da3"
+    },
+    {
+      "path": "ws/lib/constants.js",
+      "sha256": "391e823142b8b370e55a2fd32b022deaf03b8415c56000009674ebc86a0b4f86"
+    },
+    {
+      "path": "ws/lib/event-target.js",
+      "sha256": "c45d3c6e12d170c860c0c3f1a050aa0f864d9806632b609a1e607d675aba128c"
+    },
+    {
+      "path": "ws/lib/extension.js",
+      "sha256": "852564f0f6b460287043803eae732666fb5610f676874354fc89f06aa4e986ed"
+    },
+    {
+      "path": "ws/lib/limiter.js",
+      "sha256": "e0469d4b83f6ba764b15f80e1766b75c136fbff68f048f4c050f0b1c7f065f69"
+    },
+    {
+      "path": "ws/lib/permessage-deflate.js",
+      "sha256": "02c31796f0132a335d4efe7b7adcebadbb69543a1ce65ae04aaccc3530e27ab9"
+    },
+    {
+      "path": "ws/lib/receiver.js",
+      "sha256": "7b9f6afc1fffb5c98d768d7d3d6fc1b709f28b45c6ae2682ff255075394323d9"
+    },
+    {
+      "path": "ws/lib/sender.js",
+      "sha256": "a80e8688dde53d46d836a58c9d15121ee12e978b7b0f656ed818c63d20df5f94"
+    },
+    {
+      "path": "ws/lib/stream.js",
+      "sha256": "a56fcb6e2b152097ee820b6f5410b1f71e59819b45d08d9f8bda588fe39070ec"
+    },
+    {
+      "path": "ws/lib/subprotocol.js",
+      "sha256": "be3f6323d6f549568577dcba9004c1479d95c65a7abb0fe0c582875b9fac0b7c"
+    },
+    {
+      "path": "ws/lib/validation.js",
+      "sha256": "41ce8e83d0d434132e1704895fedb91f6703a701b42d91c80954ab29b2845593"
+    },
+    {
+      "path": "ws/lib/websocket-server.js",
+      "sha256": "88139775699dbc17474a074cc92f6682cb5968022db6ec856e6e46a5dc341c61"
+    },
+    {
+      "path": "ws/lib/websocket.js",
+      "sha256": "e2308419b4f64007a79095e4eda12ee5db6ddcea7ca89dfc301666ad686e1874"
+    },
+    {
+      "path": "ws/package.json",
+      "sha256": "0e8b0104fec3e3b96704861c6ef3ad77c27add2cc016e49e111291b16b677f89"
+    },
+    {
+      "path": "ws/wrapper.mjs",
+      "sha256": "fe154662301fd558f935f9c217fccbe7a7dac02ff39e648a000589403ff27c7f"
+    }
+  ]
+}

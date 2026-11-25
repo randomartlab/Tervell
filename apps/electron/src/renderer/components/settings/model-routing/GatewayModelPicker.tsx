@@ -1,0 +1,12 @@
+import * as React from 'react'
+import {Check,ChevronDown,Layers} from 'lucide-react'
+import type {ModelRoutingState} from '@proma/shared'
+import {Button} from '@/components/ui/button'
+import {Popover,PopoverContent,PopoverTrigger} from '@/components/ui/popover'
+import {Command,CommandInput,CommandList,CommandEmpty,CommandItem} from '@/components/ui/command'
+import {ProviderLogo} from './ProviderLogo'
+export function GatewayModelPicker({value,onChange,label,models,disabled}:{value:string;onChange:(value:string)=>void;label:string;models:ModelRoutingState['models'];disabled:boolean}):React.ReactElement{
+ const [open,setOpen]=React.useState(false),[query,setQuery]=React.useState('')
+ const selected=models.find(model=>model.id===value)
+ return <Popover open={open} onOpenChange={next=>{setOpen(next);if(!next)setQuery('')}}><PopoverTrigger asChild><Button type="button" role="combobox" aria-expanded={open} aria-label={label} variant="outline" disabled={disabled} className="h-10 w-full justify-start gap-2 font-normal">{value.startsWith('group/')?<Layers size={16}/>:<ProviderLogo icon={selected?.icon} className="size-5"/>}<span className="min-w-0 flex-1 truncate text-left">{selected?.name||value||'选择模型或路由组…'}</span><ChevronDown size={14} className="text-muted-foreground"/></Button></PopoverTrigger><PopoverContent align="start" className="w-[min(460px,calc(100vw-48px))] p-0"><Command><CommandInput aria-label={`搜索${label}`} placeholder="搜索模型、供应商或填写完整模型 ID…" value={query} onValueChange={setQuery}/><CommandList><CommandEmpty>没有匹配的模型</CommandEmpty>{models.map(model=><CommandItem key={model.id} value={`${model.id} ${model.name} ${model.providerName??''}`} onSelect={()=>{onChange(model.id);setOpen(false);setQuery('')}} className="gap-3 py-2.5">{model.id.startsWith('group/')?<Layers size={18}/>:<ProviderLogo icon={model.icon} className="size-6"/>}<span className="min-w-0 flex-1"><span className="block truncate">{model.name}</span><span className="block truncate text-xs text-muted-foreground">{model.providerName?`${model.providerName} · `:''}{model.id}</span></span>{value===model.id&&<Check size={14} className="text-primary"/>}</CommandItem>)}</CommandList></Command>{query.includes('/')&&!models.some(model=>model.id===query.trim())&&<div className="border-t border-border p-2"><Button type="button" variant="ghost" size="sm" className="w-full justify-start truncate" onClick={()=>{onChange(query.trim());setOpen(false);setQuery('')}}>使用 {query.trim()}</Button></div>}</PopoverContent></Popover>
+}

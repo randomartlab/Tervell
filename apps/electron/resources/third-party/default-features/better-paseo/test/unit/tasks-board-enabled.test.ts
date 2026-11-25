@@ -1,0 +1,548 @@
+import React from "react";
+import { afterEach, onTestFinished, beforeEach, describe, expect, it, vi } from "vitest";
+import TestRenderer, { act, type ReactTestInstance } from "react-test-renderer";
+import "./helpers/quiet-renderer";
+import { createFakePaseo, makeAgent, makePlacement, makeWorkspace } from "./helpers/fake-paseo";
+
+// The Tasks board is opt-in: off (or still loading), nothing shows and nothing subscribes.
+// Uses the real data layer against the fake PaseoApi, so subscriptions are counted.
+
+vi.mock("react-native", async () => {
+  const rn = await import("./helpers/rn-mock");
+  const AppState = { currentState: "active", addEventListener: () => ({ remove() {} }) };
+  return { ...rn, AppState, default: { ...rn.default, AppState } };
+});
+vi.mock("@getpaseo/plugin/client/ui", async () => {
+  // The plugin imports all of these from `client/ui` now; where both mocks name a key, the UI one wins.
+  const fromReactNative = await (async () => {
+    const rn = await import("./helpers/rn-mock");
+    const React = await import("react");
+    type Props = Record<string, unknown> & { children?: React.ReactNode };
+    function FlatList(props: Props) {
+      const data = (props.data as unknown[]) ?? [];
+      const render = props.renderItem as (info: { item: unknown; index: number }) => React.ReactNode;
+      return React.createElement("FlatList", null, data.map((item, index) => React.createElement(React.Fragment, { key: index }, render({ item, index }))));
+    }
+    function Modal(props: Props) {
+      return props.open ? React.createElement("Modal", null, props.children) : null;
+    }
+    Modal.Content = (props: Props) => React.createElement("ModalContent", null, props.children);
+    return {
+      Icon: (props: Props) => React.createElement("Icon", { name: props.name }),
+      FlatList,
+      Modal,
+      ScrollView: rn.ScrollView,
+      TextInput: rn.TextInput,
+      useToast: () => ({ show() {}, error() {} }),
+    };
+  })();
+  const fromUi = await (async () => {
+    const React = await import("react");
+    return {
+      SidebarRow: (props: Record<string, unknown> & { trailing?: React.ReactNode }) =>
+        React.createElement("SidebarRow", { label: props.label }, props.trailing),
+    };
+  })();
+  return { ...fromReactNative, ...fromUi };
+});
+const host = vi.hoisted(() => ({
+  settings: null as Record<string, unknown> | null,
+  paseo: null as unknown,
+  /** Renders that read the settings through the host's hook (each mounted reader is one live read). */
+  settingsHooks: 0,
+  /** The device settings record (`tasks-device`). */
+  device: { values: {} as Record<string, unknown>, revision: "missing" },
+}));
+vi.mock("@getpaseo/plugin/client", () => ({
+  usePaseo: () => host.paseo,
+  useRpc: (contract: { name: string }) => (input: { agentIds?: string[] }) => Promise.resolve(contract.name === "tasks.availability" ? { entries: input.agentIds!.map((agentId) => ({ agentId, availability: { issue: null, blocked: {} } })) } : { stop: false }),
+  useSettings: (definition: { id: string }) => definition.id === "tasks-device"
+    ? { status: "ready", values: host.device.values, revision: host.device.revision, saving: false, saveError: null, save: async (values: Record<string, unknown>) => { host.device = { values, revision: JSON.stringify(values) }; return true; }, reload: async () => {} }
+    : (host.settingsHooks++, host.settings ? { status: "ready", values: host.settings, revision: "1", saving: false, saveError: null } : { status: "loading" }),
+}));
+
+import { TasksBoardScreen } from "../../client/tasks/board/board-screen";
+import { TasksSidebarEntry } from "../../client/tasks/board/sidebar-entry";
+import {
+  resetTasksEnabled,
+  setTasksEnabled,
+  setTasksSettingsOpener,
+  setTasksStartupRead,
+  tasksBoardOpener,
+  tasksEnabled,
+  tasksSettingsOpener,
+} from "../../client/tasks/board/enabled";
+import { SETTINGS_SCREEN_ID, resetSettingsTab, setSettingsTab, settingsTab } from "../../client/settings-tab";
+import { resetTasksLanguage, resolveTasksLanguage } from "../../client/tasks/i18n";
+import { resetHostLanguageForTests } from "../../client/i18n/host-language";
+import { contributeTasks } from "../../client/tasks/contribute";
+import { DEFAULT_TASKS_SETTINGS as STOCK_SETTINGS } from "../../shared/tasks-settings";
+import { titleLanguageRpc } from "../../shared/title-generation";
+// These tests start from the board and the archived lane both off; the stock settings turn both on.
+const DEFAULT_TASKS_SETTINGS = { ...STOCK_SETTINGS, enabled: false, board: { ...STOCK_SETTINGS.board, showArchived: false } };
+import { resetEnhancerPreferences, updateEnhancerPreferences } from "../../client/preferences";
+
+(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+const theme = {
+  colors: {
+    surface0: "#ffffff", surface1: "#fafafa", surface2: "#f4f4f5", border: "#e4e4e7",
+    foreground: "#09090b", foregroundMuted: "#71717a", accent: "#2563eb", accentForeground: "#ffffff",
+    statusSuccess: "#198754", statusWarning: "#a36a00", statusDanger: "#d92d20",
+  },
+} as never;
+const hostProps = { theme, host: { id: "host-1", label: "Local" }, layout: { compact: false, platform: "web" as const } };
+
+let fake: ReturnType<typeof createFakePaseo>;
+let renderer: ReturnType<typeof TestRenderer.create> | undefined;
+
+function sidebar() {
+  return React.createElement(TasksSidebarEntry, { ...hostProps, currentScreen: null, openScreen: vi.fn(), openPopover: vi.fn() });
+}
+
+function screen() {
+  return React.createElement(TasksBoardScreen, { ...hostProps, params: {} });
+}
+
+async function mount(element: React.ReactElement) {
+  await act(async () => {
+    renderer = TestRenderer.create(element);
+  });
+  // Let the data layer's first list calls settle.
+  await act(async () => {
+    for (let tick = 0; tick < 5; tick++) await Promise.resolve();
+  });
+}
+
+function textOf(node: ReactTestInstance | string): string {
+  if (typeof node === "string") return node;
+  return node.children.map(textOf).join("");
+}
+
+beforeEach(() => {
+  const workspace = makeWorkspace({ id: "wks_1" });
+  const agent = makeAgent({ id: "a1", status: "running", workspaceId: "wks_1" });
+  fake = createFakePaseo({ workspaces: [workspace], agents: [agent], placements: { a1: makePlacement(agent) } });
+  host.paseo = fake.paseo;
+  host.settings = null;
+  host.settingsHooks = 0;
+});
+afterEach(async () => {
+  await act(async () => renderer?.unmount());
+  renderer = undefined;
+  resetTasksEnabled();
+  resetTasksLanguage();
+  resetEnhancerPreferences();
+});
+
+describe("Tasks sidebar entry, opt-in", () => {
+  it("draws nothing and subscribes to nothing while the settings load", async () => {
+    await mount(sidebar());
+    expect(renderer!.toJSON()).toBeNull();
+    expect(fake.openSubscriptions()).toBe(0);
+    expect(tasksEnabled()).toBeNull();
+  });
+
+  it("keeps the bundle's plain row while the settings load, subscribing to nothing, and drops it once the board is off", async () => {
+    const placeholder = React.createElement("Placeholder");
+    const withPlaceholder = () =>
+      React.createElement(TasksSidebarEntry, { ...hostProps, currentScreen: null, openScreen: vi.fn(), openPopover: vi.fn(), placeholder });
+    await mount(withPlaceholder());
+    expect(renderer!.root.findAllByType("Placeholder" as never)).toHaveLength(1);
+    expect(fake.openSubscriptions()).toBe(0);
+    host.settings = { ...DEFAULT_TASKS_SETTINGS };
+    await act(async () => renderer!.update(withPlaceholder()));
+    expect(renderer!.toJSON()).toBeNull();
+  });
+
+  it("draws nothing and subscribes to nothing while the board is off", async () => {
+    host.settings = { ...DEFAULT_TASKS_SETTINGS };
+    await mount(sidebar());
+    expect(renderer!.toJSON()).toBeNull();
+    expect(fake.openSubscriptions()).toBe(0);
+    expect(fake.calls.filter((call) => call.method.startsWith("agents."))).toEqual([]);
+    expect(tasksEnabled()).toBe(false);
+  });
+
+  it("draws the row and counts once the board is on", async () => {
+    host.settings = { ...DEFAULT_TASKS_SETTINGS, enabled: true };
+    await mount(sidebar());
+    expect(renderer!.root.findAll((node) => (node.type as unknown) === "SidebarRow")).toHaveLength(1);
+    expect(fake.openSubscriptions()).toBeGreaterThan(0);
+    expect(tasksEnabled()).toBe(true);
+  });
+
+  it("does not subscribe for counts it does not draw", async () => {
+    host.settings = { ...DEFAULT_TASKS_SETTINGS, enabled: true, sidebar: { count: "none" } };
+    await mount(sidebar());
+    expect(renderer!.root.findAll((node) => (node.type as unknown) === "SidebarRow")).toHaveLength(1);
+    expect(fake.openSubscriptions()).toBe(0);
+  });
+
+  it("reports the device settings from a row without counts, so the web shortcut loads at startup", async () => {
+    const holder = globalThis as Record<string, unknown>;
+    delete holder.__betterPaseoDeviceTasksStorageForTests;
+    holder.__rnMockOS = "web";
+    holder.localStorage = { getItem: () => null, setItem() {} };
+    onTestFinished(() => { delete holder.__rnMockOS; delete holder.localStorage; });
+    const { deviceTasksStore } = await import("../../client/tasks/device-preferences");
+    const { deviceBoardPreferences } = await import("../../client/tasks/device-store");
+    deviceTasksStore().load(deviceBoardPreferences(DEFAULT_TASKS_SETTINGS.board));
+    host.settings = { ...DEFAULT_TASKS_SETTINGS, enabled: true, sidebar: { count: "none" } };
+    await mount(sidebar());
+    await act(async () => { await vi.waitFor(() => expect(deviceTasksStore().snapshot()).toMatchObject({ ready: true, error: null }), 5_000); });
+  });
+
+  it("releases its subscriptions when the board is turned off", async () => {
+    host.settings = { ...DEFAULT_TASKS_SETTINGS, enabled: true };
+    await mount(sidebar());
+    expect(fake.openSubscriptions()).toBeGreaterThan(0);
+    host.settings = { ...DEFAULT_TASKS_SETTINGS, enabled: false };
+    await act(async () => renderer!.update(sidebar()));
+    expect(renderer!.toJSON()).toBeNull();
+    expect(fake.openSubscriptions()).toBe(0);
+    expect(tasksEnabled()).toBe(false);
+  });
+});
+
+describe("Tasks board screen, opt-in", () => {
+  it("says the board is off, offers the settings, and subscribes to nothing", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "setTimeout"] });
+    try {
+      const open = vi.fn();
+      setTasksSettingsOpener(open);
+      host.settings = { ...DEFAULT_TASKS_SETTINGS };
+      await mount(screen());
+      expect(textOf(renderer!.root)).toContain("The Tasks board is off");
+      expect(fake.openSubscriptions()).toBe(0);
+      expect(vi.getTimerCount()).toBe(0);
+      const button = renderer!.root.find((node) => (node.type as unknown) === "Pressable" && textOf(node) === "Open settings");
+      act(() => button.props.onPress());
+      expect(open).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("drops the settings button where nothing can open the settings", async () => {
+    host.settings = { ...DEFAULT_TASKS_SETTINGS };
+    await mount(screen());
+    expect(textOf(renderer!.root)).not.toContain("Open settings");
+  });
+
+  it("draws an empty page while the settings load", async () => {
+    await mount(screen());
+    expect(textOf(renderer!.root)).toBe("");
+    expect(fake.openSubscriptions()).toBe(0);
+  });
+
+  it("opened directly while off, waits for the startup read and reads nothing itself", async () => {
+    let answer!: (value: unknown) => void;
+    const rpc = vi.fn(() => new Promise((resolve) => (answer = resolve)));
+    contributeTasks({
+      addScreen: () => () => {},
+      addSidebarHeaderItem: () => () => {},
+      addSettingsScreen: () => () => {},
+      addCommandCenterItem: () => () => {},
+      openSettings: vi.fn(),
+      rpc,
+    } as never);
+    await mount(screen());
+    expect(textOf(renderer!.root)).toBe("");
+    answer({ status: "ready", revision: "1", values: { enabled: false } });
+    await act(async () => {
+      for (let tick = 0; tick < 5; tick++) await Promise.resolve();
+    });
+    expect(textOf(renderer!.root)).toContain("The Tasks board is off");
+    expect(textOf(renderer!.root)).toContain("Tasks board in Better Paseo's settings");
+    expect(rpc).toHaveBeenCalledTimes(2);
+    expect(host.settingsHooks).toBe(0);
+    expect(fake.openSubscriptions()).toBe(0);
+  });
+
+  it("reads the settings itself when the startup read failed", async () => {
+    contributeTasks({
+      addScreen: () => () => {},
+      addSidebarHeaderItem: () => () => {},
+      addSettingsScreen: () => () => {},
+      addCommandCenterItem: () => () => {},
+      openSettings: vi.fn(),
+      rpc: () => Promise.reject(new Error("offline")),
+    } as never);
+    host.settings = { ...DEFAULT_TASKS_SETTINGS };
+    await mount(screen());
+    expect(host.settingsHooks).toBeGreaterThan(0);
+    expect(textOf(renderer!.root)).toContain("The Tasks board is off");
+  });
+
+  it("opens straight onto the board on a reload: registered first, settings later", async () => {
+    // contribute runs before the settings read answers; the route resolves against the screen at once.
+    let answer!: (value: unknown) => void;
+    const registered: string[] = [];
+    contributeTasks({
+      addScreen: (screen: { id: string }) => (registered.push(screen.id), () => {}),
+      addSidebarHeaderItem: () => () => {},
+      addSettingsScreen: () => () => {},
+      addCommandCenterItem: () => () => {},
+      openSettings: vi.fn(),
+      rpc: () => new Promise((resolve) => (answer = resolve)),
+    } as never);
+    expect(registered).toEqual(["tasks"]);
+    await mount(screen());
+    expect(textOf(renderer!.root)).toBe("");
+    expect(fake.openSubscriptions()).toBe(0);
+    host.settings = { ...DEFAULT_TASKS_SETTINGS, enabled: true };
+    answer({ status: "ready", revision: "1", values: { enabled: true } });
+    await act(async () => renderer!.update(screen()));
+    await act(async () => {
+      for (let tick = 0; tick < 5; tick++) await Promise.resolve();
+    });
+    // The board itself: its toolbar counts the one running agent.
+    expect(textOf(renderer!.root)).toContain("1 task");
+    expect(fake.openSubscriptions()).toBeGreaterThan(0);
+  });
+});
+
+describe("Tasks board across a reconnect", () => {
+  // Paseo disposes the plugin when the host drops and evaluates it again on
+  // reconnect: module state starts over, the startup read and the settings
+  // are out again, and the new store has not caught up.
+  async function openOnce() {
+    host.settings = { ...DEFAULT_TASKS_SETTINGS, enabled: true };
+    await mount(screen());
+    expect(textOf(renderer!.root)).toContain("1 task");
+    await act(async () => renderer!.unmount());
+    renderer = undefined;
+  }
+
+  function reconnect(options: Parameters<typeof createFakePaseo>[0] = {}) {
+    resetTasksEnabled();
+    setTasksStartupRead("pending");
+    host.settings = null;
+    fake = createFakePaseo(options);
+    host.paseo = fake.paseo;
+  }
+
+  function carriedBoard() {
+    const carry = (globalThis as Record<string, unknown>).__betterPaseoTasksCarry as Map<string, Record<string, unknown>>;
+    return carry.get("host-1")!;
+  }
+
+  it("draws the last cards at once, before the startup read, the settings or the lists answer", async () => {
+    await openOnce();
+    reconnect({ stalled: true });
+    await mount(screen());
+    expect(textOf(renderer!.root)).toContain("1 task");
+    expect(fake.openSubscriptions()).toBeGreaterThan(0);
+  });
+
+  it("moves to the fresh cards once the store has caught up", async () => {
+    await openOnce();
+    const workspace = makeWorkspace({ id: "wks_1" });
+    const agents = [makeAgent({ id: "a1", status: "running", workspaceId: "wks_1" }), makeAgent({ id: "a2", status: "running", workspaceId: "wks_1" })];
+    reconnect({ workspaces: [workspace], agents, placements: { a1: makePlacement(agents[0]!), a2: makePlacement(agents[1]!) } });
+    await mount(screen());
+    expect(textOf(renderer!.root)).toContain("2 tasks");
+  });
+
+  it("drops cards another version of the plugin carried, and waits as on a first open", async () => {
+    await openOnce();
+    (carriedBoard().board as { shape: string }).shape = "another bundle";
+    reconnect({ stalled: true });
+    await mount(screen());
+    expect(textOf(renderer!.root)).not.toContain("1 task");
+  });
+
+  it("waits for the startup read when the carried settings no longer say the board is on", async () => {
+    await openOnce();
+    carriedBoard().settings = { enabled: false };
+    reconnect({ stalled: true });
+    await mount(screen());
+    expect(textOf(renderer!.root)).toBe("");
+    expect(fake.openSubscriptions()).toBe(0);
+  });
+});
+
+describe("Tasks registrations, opt-in", () => {
+  it("opens from the shortcut and removes the listener when disabled or unloaded", async () => {
+    vi.stubGlobal("__rnMockOS", "web");
+    vi.stubGlobal("navigator", { platform: "MacIntel", userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/142.0 Electron/39.0 Safari/537.36" });
+    const target = new EventTarget();
+    vi.stubGlobal("window", target);
+    const press = () => target.dispatchEvent(Object.assign(new Event("keydown", { cancelable: true }), { code: "KeyY", metaKey: true, ctrlKey: false, altKey: false, shiftKey: true, repeat: false, isComposing: false }));
+    resetTasksEnabled();
+    const plugin = client(() => Promise.resolve({ status: "ready", revision: "1", values: { enabled: true } }));
+    const cleanup = contributeTasks(plugin.value as never);
+    try {
+      await flush();
+      press();
+      expect(plugin.value.openScreen).toHaveBeenCalledWith({ screenId: "tasks", params: expect.any(Object) });
+      expect(plugin.value.openScreen).toHaveBeenCalledTimes(1);
+      setTasksEnabled(false);
+      press();
+      expect(plugin.value.openScreen).toHaveBeenCalledTimes(1);
+      setTasksEnabled(true);
+      press();
+      expect(plugin.value.openScreen).toHaveBeenCalledTimes(2);
+      cleanup();
+      press();
+      expect(plugin.value.openScreen).toHaveBeenCalledTimes(2);
+    } finally {
+      cleanup();
+      vi.unstubAllGlobals();
+    }
+  });
+  type Registered = { kind: string; id: string; title: string | (() => string) };
+  function client(read: () => Promise<unknown>) {
+    const active: Registered[] = [];
+    const removed: Registered[] = [];
+    const add = (kind: string) => (contribution: { id: string; title: string | (() => string) }) => {
+      const entry = { kind, id: contribution.id, title: contribution.title };
+      active.push(entry);
+      return () => {
+        active.splice(active.indexOf(entry), 1);
+        removed.push(entry);
+      };
+    };
+    const value = {
+      addScreen: add("screen"),
+      addSidebarHeaderItem: add("sidebar"),
+      addSettingsScreen: add("settings"),
+      addCommandCenterItem: add("command"),
+      openSettings: vi.fn(),
+      openScreen: vi.fn(),
+      rpc: vi.fn(read),
+    };
+    return { value, active, removed, kinds: () => active.map((entry) => entry.kind).sort() };
+  }
+  const flush = async () => {
+    for (let tick = 0; tick < 5; tick++) await Promise.resolve();
+  };
+  const offRecord = () => Promise.resolve({ status: "ready", revision: "1", values: { enabled: false } });
+
+  it("registers only the idle screen while off (its options live on the settings page): no sidebar item, command, timer or listener", async () => {
+    vi.useFakeTimers();
+    const listen = vi.fn();
+    const previous = (globalThis as { addEventListener?: unknown }).addEventListener;
+    (globalThis as { addEventListener?: unknown }).addEventListener = listen;
+    try {
+      const plugin = client(offRecord);
+      contributeTasks(plugin.value as never);
+      await flush();
+      expect(plugin.value.rpc).toHaveBeenCalledTimes(2);
+      expect(plugin.kinds()).toEqual(["screen"]);
+      expect(tasksEnabled()).toBe(false);
+      expect(vi.getTimerCount()).toBe(0);
+      expect(listen).not.toHaveBeenCalled();
+      expect(fake.openSubscriptions()).toBe(0);
+    } finally {
+      (globalThis as { addEventListener?: unknown }).addEventListener = previous;
+      vi.useRealTimers();
+    }
+  });
+
+  it("registers the board when it is turned on and calls every cleanup when it is turned off", async () => {
+    const plugin = client(offRecord);
+    const cleanup = contributeTasks(plugin.value as never);
+    await flush();
+    setTasksEnabled(true);
+    expect(plugin.kinds()).toEqual(["command", "screen", "sidebar"]);
+    setTasksEnabled(true);
+    expect(plugin.active).toHaveLength(3);
+    setTasksEnabled(false);
+    expect(plugin.kinds()).toEqual(["screen"]);
+    expect(plugin.removed.map((entry) => entry.kind).sort()).toEqual(["command", "sidebar"]);
+    setTasksEnabled(true);
+    cleanup();
+    expect(plugin.active).toEqual([]);
+    // Unloaded: a later flip registers nothing.
+    setTasksEnabled(false);
+    setTasksEnabled(true);
+    expect(plugin.active).toEqual([]);
+  });
+
+  it("seeds from one settings read at startup", async () => {
+    const plugin = client(() => Promise.resolve({ status: "ready", revision: "1", values: { enabled: true } }));
+    contributeTasks(plugin.value as never);
+    expect(plugin.kinds()).toEqual(["screen"]);
+    await flush();
+    expect(plugin.kinds()).toEqual(["command", "screen", "sidebar"]);
+    // A record that never set the switch reads on.
+    resetTasksEnabled();
+    const fresh = client(() => Promise.resolve({ status: "ready", revision: "1", values: {} }));
+    contributeTasks(fresh.value as never);
+    await flush();
+    expect(fresh.kinds()).toEqual(["command", "screen", "sidebar"]);
+  });
+
+  it("keeps the board off when the read fails or the record is unusable", async () => {
+    const failing = client(() => Promise.reject(new Error("offline")));
+    contributeTasks(failing.value as never);
+    await flush();
+    expect(failing.kinds()).toEqual(["screen"]);
+    expect(tasksEnabled()).toBeNull();
+    resetTasksEnabled();
+    const invalid = client(() => Promise.resolve({ status: "invalid", revision: "1", error: "bad" }));
+    contributeTasks(invalid.value as never);
+    await flush();
+    expect(invalid.kinds()).toEqual(["screen"]);
+  });
+
+  it("titles everything in the host's language and re-registers when it changes", async () => {
+    updateEnhancerPreferences({ language: "zh" });
+    const plugin = client(() => Promise.resolve({ status: "ready", revision: "1", values: { enabled: true } }));
+    contributeTasks(plugin.value as never);
+    await flush();
+    expect(plugin.value.rpc).toHaveBeenCalledWith(titleLanguageRpc, { language: "zh" });
+    expect(Object.fromEntries(plugin.active.map((entry) => [entry.kind, typeof entry.title === "function" ? entry.title() : entry.title]))).toEqual({
+      screen: "任务",
+      sidebar: "任务",
+      command: "打开任务",
+    });
+    updateEnhancerPreferences({ language: "en" });
+    resolveTasksLanguage();
+    await flush();
+    expect(plugin.value.rpc).toHaveBeenCalledWith(titleLanguageRpc, { language: "en" });
+    expect(Object.fromEntries(plugin.active.map((entry) => [entry.kind, typeof entry.title === "function" ? entry.title() : entry.title]))).toEqual({
+      screen: "Tasks",
+      sidebar: "Tasks",
+      command: "Open Tasks",
+    });
+    expect(plugin.active).toHaveLength(3);
+    // The screen follows in place: registered once, never removed.
+    expect(plugin.removed.filter((entry) => entry.kind === "screen")).toEqual([]);
+  });
+
+  it("opens the Tasks half of Better Paseo's settings page, and the board from it", async () => {
+    setSettingsTab("display");
+    const plugin = client(offRecord);
+    const cleanup = contributeTasks(plugin.value as never);
+    await flush();
+    expect(plugin.active.filter((entry) => entry.kind === "settings")).toEqual([]);
+    tasksSettingsOpener()!();
+    expect(settingsTab()).toBe("tasks");
+    expect(plugin.value.openSettings).toHaveBeenCalledWith(SETTINGS_SCREEN_ID);
+    tasksBoardOpener()!();
+    expect(plugin.value.openScreen).toHaveBeenCalledWith({ screenId: "tasks", params: expect.any(Object) });
+    cleanup();
+    expect(tasksSettingsOpener()).toBeNull();
+    expect(tasksBoardOpener()).toBeNull();
+    resetSettingsTab();
+  });
+
+  it("relabels when the native host's language arrives from AsyncStorage, with nothing of the board mounted", async () => {
+    resetHostLanguageForTests({
+      deviceLocales: () => ["en-SG"],
+      nativeRead: () => Promise.resolve({ current: JSON.stringify({ language: "zh-CN" }), legacy: null }),
+    });
+    const plugin = client(() => Promise.resolve({ status: "ready", revision: "1", values: { enabled: true } }));
+    contributeTasks(plugin.value as never);
+    await flush();
+    await flush();
+    expect(Object.fromEntries(plugin.active.map((entry) => [entry.kind, typeof entry.title === "function" ? entry.title() : entry.title]))).toEqual({
+      screen: "任务",
+      sidebar: "任务",
+      command: "打开任务",
+    });
+  });
+});

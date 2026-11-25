@@ -1,0 +1,29 @@
+{
+  "name": "@proma/web",
+  "version": "0.1.6",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "preview": "vite preview --host 127.0.0.1"
+  },
+  "dependencies": {
+    "@proma/client": "workspace:*",
+    "@proma/protocol": "workspace:*",
+    "@proma/ui": "workspace:*",
+    "jotai": "^2.17.1",
+    "lucide-react": "^0.460.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "@proma/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^6.0.3",
+    "typescript": "^5.0.0"
+  }
+}

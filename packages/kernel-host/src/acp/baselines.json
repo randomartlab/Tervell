@@ -1,0 +1,74 @@
+{
+  "claude-code-scripted.json": {
+    "kernelId": "claude-code",
+    "dialectId": "claude-code",
+    "agentVersion": "scripted-1",
+    "fingerprint": "a49593dbda06295bfea58c08761e1d7f65d004025ae796822f3ae1acae5931f4",
+    "scenario": "[[{\"t\":\"message.final\"},{\"t\":\"tool.call\",\"kind\":\"read\",\"status\":\"pending\"},{\"t\":\"permission.request\",\"kind\":\"read\",\"actions\":[\"allow\",\"deny\"]},{\"t\":\"tool.update\",\"status\":\"succeeded\"},{\"t\":\"tool.call\",\"kind\":\"edit\",\"status\":\"pending\"},{\"t\":\"permission.request\",\"kind\":\"edit\",\"actions\":[\"allow\",\"deny\"]},{\"t\":\"tool.update\",\"status\":\"succeeded\"},{\"t\":\"tool.call\",\"kind\":\"execute\",\"status\":\"pending\"},{\"t\":\"permission.request\",\"kind\":\"execute\",\"actions\":[\"allow\",\"deny\"]},{\"t\":\"tool.update\",\"status\":\"succeeded\"},{\"t\":\"plan.update\"},{\"t\":\"usage\"},{\"t\":\"usage\"},{\"t\":\"done\",\"reason\":\"stop\"}]]",
+    "evidence": "scripted"
+  },
+  "codex-scripted.json": {
+    "kernelId": "codex",
+    "dialectId": "codex",
+    "agentVersion": "scripted-1",
+    "fingerprint": "d920d4a911672b60222b25e850f2df376d3157a9155d517484494c5d1877d810",
+    "scenario": "[[{\"t\":\"message.final\"},{\"t\":\"tool.call\",\"kind\":\"read\",\"status\":\"pending\"},{\"t\":\"permission.request\",\"kind\":\"read\",\"actions\":[\"allow\",\"deny\"]},{\"t\":\"tool.update\",\"status\":\"succeeded\"},{\"t\":\"tool.call\",\"kind\":\"edit\",\"status\":\"pending\"},{\"t\":\"permission.request\",\"kind\":\"edit\",\"actions\":[\"allow\",\"deny\"]},{\"t\":\"tool.update\",\"status\":\"succeeded\"},{\"t\":\"tool.call\",\"kind\":\"execute\",\"status\":\"pending\"},{\"t\":\"permission.request\",\"kind\":\"execute\",\"actions\":[\"allow\",\"deny\"]},{\"t\":\"tool.update\",\"status\":\"succeeded\"},{\"t\":\"plan.update\"},{\"t\":\"usage\"},{\"t\":\"done\",\"reason\":\"stop\"}]]",
+    "evidence": "scripted"
+  },
+  "cursor-agent-scripted.json": {
+    "kernelId": "cursor-agent",
+    "dialectId": "cursor-agent",
+    "agentVersion": "scripted-1",
+    "fingerprint": "6fac6b50cf50cd5d1766587b424255a759b04afb6f50eeb9517c2b47f0bb63e9",
+    "scenario": "[[{\"t\":\"message.final\"},{\"t\":\"tool.call\",\"kind\":\"read\",\"status\":\"pending\"},{\"t\":\"permission.request\",\"kind\":\"read\",\"actions\":[\"allow\",\"deny\"]},{\"t\":\"tool.update\",\"status\":\"succeeded\"},{\"t\":\"tool.call\",\"kind\":\"edit\",\"status\":\"pending\"},{\"t\":\"permission.request\",\"kind\":\"edit\",\"actions\":[\"allow\",\"deny\"]},{\"t\":\"tool.update\",\"status\":\"succeeded\"},{\"t\":\"tool.call\",\"kind\":\"execute\",\"status\":\"pending\"},{\"t\":\"permission.request\",\"kind\":\"execute\",\"actions\":[\"allow\",\"deny\"]},{\"t\":\"tool.update\",\"status\":\"succeeded\"},{\"t\":\"permission.request\",\"kind\":\"other\",\"actions\":[\"allow\",\"allow\"]},{\"t\":\"plan.update\"},{\"t\":\"permission.request\",\"kind\":\"other\",\"actions\":[\"allow\",\"deny\"]},{\"t\":\"plan.update\"},{\"t\":\"usage\"},{\"t\":\"done\",\"reason\":\"stop\"}]]",
+    "evidence": "scripted"
+  },
+  "gemini-cli-scripted.json": {
+    "kernelId": "gemini-cli",
+    "dialectId": "gemini-cli",
+    "agentVersion": "scripted-1",
+    "fingerprint": "065d791cba214370ebe5461d20f2de1b7d1aff189b94386727cf3694f50b2f9d",
+    "scenario": "[[{\"t\":\"message.final\"},{\"t\":\"tool.call\",\"kind\":\"read\",\"status\":\"pending\"},{\"t\":\"permission.request\",\"kind\":\"read\",\"actions\":[\"allow\",\"deny\"]},{\"t\":\"tool.update\",\"status\":\"succeeded\"},{\"t\":\"tool.call\",\"kind\":\"edit\",\"status\":\"pending\"},{\"t\":\"permission.request\",\"kind\":\"edit\",\"actions\":[\"allow\",\"deny\"]},{\"t\":\"tool.update\",\"status\":\"succeeded\"},{\"t\":\"tool.call\",\"kind\":\"execute\",\"status\":\"pending\"},{\"t\":\"permission.request\",\"kind\":\"execute\",\"actions\":[\"allow\",\"deny\"]},{\"t\":\"tool.update\",\"status\":\"succeeded\"},{\"t\":\"plan.update\"},{\"t\":\"usage\"},{\"t\":\"usage\"},{\"t\":\"done\",\"reason\":\"stop\"}]]",
+    "evidence": "scripted"
+  },
+  "grok-scripted.json": {
+    "kernelId": "grok",
+    "dialectId": "grok",
+    "agentVersion": "scripted-1",
+    "fingerprint": "f2032acac0645f83e848757c02b018ebdfd47d543ac957614c00ddd739926fa1",
+    "scenario": "[[{\"t\":\"message.final\"},{\"t\":\"tool.call\",\"kind\":\"read\",\"status\":\"pending\"},{\"t\":\"permission.request\",\"kind\":\"read\",\"actions\":[\"allow\",\"deny\"]},{\"t\":\"tool.update\",\"status\":\"succeeded\"},{\"t\":\"tool.call\",\"kind\":\"edit\",\"status\":\"pending\"},{\"t\":\"permission.request\",\"kind\":\"edit\",\"actions\":[\"allow\",\"deny\"]},{\"t\":\"tool.update\",\"status\":\"succeeded\"},{\"t\":\"tool.call\",\"kind\":\"execute\",\"status\":\"pending\"},{\"t\":\"permission.request\",\"kind\":\"execute\",\"actions\":[\"allow\",\"deny\"]},{\"t\":\"tool.update\",\"status\":\"succeeded\"},{\"t\":\"plan.update\"},{\"t\":\"usage\"},{\"t\":\"done\",\"reason\":\"stop\"}]]",
+    "evidence": "scripted"
+  },
+  "omp-live-tools.json": {
+    "kernelId": "omp",
+    "dialectId": "omp",
+    "agentVersion": "omp/18.19.0",
+    "fingerprint": "018e28b0d554b3573853646a1fa8e8109fabff1c9677260a39ec91a92d7e42e5",
+    "scenario": "[[{\"t\":\"tool.call\",\"kind\":\"read\",\"status\":\"pending\"},{\"t\":\"tool.update\",\"status\":\"succeeded\"},{\"t\":\"tool.call\",\"kind\":\"edit\",\"status\":\"pending\"},{\"t\":\"tool.update\",\"status\":\"succeeded\"},{\"t\":\"permission.request\",\"kind\":\"execute\",\"actions\":[\"allow\",\"allow\",\"deny\",\"deny\"]},{\"t\":\"tool.call\",\"kind\":\"execute\",\"status\":\"pending\"},{\"t\":\"tool.update\",\"status\":\"running\"},{\"t\":\"tool.update\",\"status\":\"running\"},{\"t\":\"tool.update\",\"status\":\"running\"},{\"t\":\"tool.update\",\"status\":\"succeeded\"},{\"t\":\"usage\"},{\"t\":\"message.final\"},{\"t\":\"usage\"},{\"t\":\"done\",\"reason\":\"stop\"}]]",
+    "evidence": "live"
+  },
+  "omp-scripted.json": {
+    "kernelId": "omp",
+    "dialectId": "omp",
+    "agentVersion": "scripted-1",
+    "fingerprint": "b846b38d123b8bb7e6c10d30d19f72a65a4b11fed6961e83a695a9124582c30e",
+    "scenario": "[[{\"t\":\"message.final\"},{\"t\":\"tool.call\",\"kind\":\"read\",\"status\":\"pending\"},{\"t\":\"permission.request\",\"kind\":\"read\",\"actions\":[\"allow\",\"deny\"]},{\"t\":\"tool.update\",\"status\":\"succeeded\"},{\"t\":\"tool.call\",\"kind\":\"edit\",\"status\":\"pending\"},{\"t\":\"permission.request\",\"kind\":\"edit\",\"actions\":[\"allow\",\"deny\"]},{\"t\":\"tool.update\",\"status\":\"succeeded\"},{\"t\":\"tool.call\",\"kind\":\"execute\",\"status\":\"pending\"},{\"t\":\"permission.request\",\"kind\":\"execute\",\"actions\":[\"allow\",\"deny\"]},{\"t\":\"tool.update\",\"status\":\"succeeded\"},{\"t\":\"plan.update\"},{\"t\":\"usage\"},{\"t\":\"usage\"},{\"t\":\"done\",\"reason\":\"stop\"}]]",
+    "evidence": "scripted"
+  },
+  "opencode-1-scripted.json": {
+    "kernelId": "opencode-1",
+    "dialectId": "opencode-1",
+    "agentVersion": "scripted-1",
+    "fingerprint": "f2065cf4997a43dc255640402a915b8382bbb35c59a9bbcabe48be0d41e526cb",
+    "scenario": "[[{\"t\":\"message.final\"},{\"t\":\"tool.call\",\"kind\":\"read\",\"status\":\"pending\"},{\"t\":\"permission.request\",\"kind\":\"read\",\"actions\":[\"allow\",\"deny\"]},{\"t\":\"tool.update\",\"status\":\"succeeded\"},{\"t\":\"tool.call\",\"kind\":\"edit\",\"status\":\"pending\"},{\"t\":\"permission.request\",\"kind\":\"edit\",\"actions\":[\"allow\",\"deny\"]},{\"t\":\"tool.update\",\"status\":\"succeeded\"},{\"t\":\"tool.call\",\"kind\":\"execute\",\"status\":\"pending\"},{\"t\":\"permission.request\",\"kind\":\"execute\",\"actions\":[\"allow\",\"deny\"]},{\"t\":\"tool.update\",\"status\":\"succeeded\"},{\"t\":\"plan.update\"},{\"t\":\"usage\"},{\"t\":\"done\",\"reason\":\"stop\"}]]",
+    "evidence": "scripted"
+  },
+  "opencode-2-scripted.json": {
+    "kernelId": "opencode-2",
+    "dialectId": "opencode-2",
+    "agentVersion": "scripted-1",
+    "fingerprint": "1b1960498c070eaa8e8526b437436c3e3fd57ded252d33f6f07d933d5f103b02",
+    "scenario": "[[{\"t\":\"message.final\"},{\"t\":\"tool.call\",\"kind\":\"read\",\"status\":\"pending\"},{\"t\":\"permission.request\",\"kind\":\"read\",\"actions\":[\"allow\",\"deny\"]},{\"t\":\"tool.update\",\"status\":\"succeeded\"},{\"t\":\"tool.call\",\"kind\":\"edit\",\"status\":\"pending\"},{\"t\":\"permission.request\",\"kind\":\"edit\",\"actions\":[\"allow\",\"deny\"]},{\"t\":\"tool.update\",\"status\":\"succeeded\"},{\"t\":\"tool.call\",\"kind\":\"execute\",\"status\":\"pending\"},{\"t\":\"permission.request\",\"kind\":\"execute\",\"actions\":[\"allow\",\"deny\"]},{\"t\":\"tool.update\",\"status\":\"succeeded\"},{\"t\":\"plan.update\"},{\"t\":\"usage\"},{\"t\":\"done\",\"reason\":\"stop\"}]]",
+    "evidence": "scripted"
+  }
+}

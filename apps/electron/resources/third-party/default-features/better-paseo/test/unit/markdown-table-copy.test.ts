@@ -1,0 +1,618 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+import React from "react";
+
+const { copyText, toastShow, motionSetting } = vi.hoisted(() => ({
+  copyText: vi.fn(async (_text: string) => {}),
+  toastShow: vi.fn(),
+  motionSetting: { reduced: false },
+}));
+vi.mock("../../client/ui/use-reduced-motion", () => ({ useReducedMotion: () => motionSetting.reduced }));
+function listContext() {
+  const store = globalThis as { __tableListContext?: React.Context<{ getScrollMetrics(): { offset: number } } | null> };
+  return store.__tableListContext ??= React.createContext<{ getScrollMetrics(): { offset: number } } | null>(null);
+}
+vi.mock("react-native", async () => ({ ...await import("./helpers/rn-mock"), VirtualizedList: { contextType: listContext() } }));
+vi.mock("@getpaseo/plugin/client/ui", async () => {
+  const rn = await import("./helpers/rn-mock");
+  return {
+    Icon: (props: Record<string, unknown>) => React.createElement("Icon", props),
+    TextInput: rn.TextInput,
+    ScrollView: rn.ScrollView,
+    Modal: rn.View,
+    copyText,
+    useToast: () => ({ show: toastShow, error() {}, success() {} }),
+  };
+});
+vi.mock("@getpaseo/plugin/client", () => ({
+  useAgent: () => undefined,
+  useWorkspace: () => undefined,
+  useRpc: () => () => Promise.resolve(null),
+  usePaseo: () => ({}),
+  useSettings: () => ({ data: undefined, status: "loading" }),
+}));
+
+await import("./helpers/quiet-renderer");
+const { default: TestRenderer, act } = await import("react-test-renderer");
+const { buildThemeTokens } = await import("../../client/components/theme-tokens");
+const { MarkdownView } = await import("../../client/components/markdown/markdown-view");
+const { ChatComposerContext, quoteCell } = await import("../../client/ui/chat-composer");
+const { StyleSheet, Animated, TurboModuleRegistry } = await import("./helpers/rn-mock");
+const { columnWidths } = await import("../../client/components/markdown/render/table");
+const { TOOLBAR_TOOLTIP_MS } = await import("../../client/ui/toolbar-button");
+const { variantMetrics, TABLE_DIVIDER_WIDTH } = await import("../../client/components/markdown/render/styles");
+const { lexBlock } = await import("../../client/components/markdown/lex");
+const { getEnhancerPreferences, updateEnhancerPreferences } = await import("../../client/preferences");
+type TableToken = import("../../client/vendor/marked").Tokens.Table;
+
+(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+const colors = {
+  surface0: "#ffffff", surface1: "#f6f6f7", surface2: "#ececee", border: "#e2e2e6",
+  foreground: "#1b1b1f", foregroundMuted: "#6b6b75", accent: "#3b6fe0",
+  accentForeground: "#ffffff", statusSuccess: "#1f8a5b", statusWarning: "#a36a00",
+  statusDanger: "#d23c3c",
+};
+const tokens = buildThemeTokens(colors);
+let renderer: ReturnType<typeof TestRenderer.create> | undefined;
+const appendText = vi.fn((_text: string) => true);
+
+/**
+ * The frame sits at (0, 100) on the page; its rows, measured in order after
+ * it, are 30 tall. A native finger is placed on a cell from these.
+ */
+let measuredRow = 0;
+const createNodeMock = () => ({
+  measure: (done: (...args: number[]) => void) => { measuredRow = 0; done(0, 0, 300, 90, 0, 100); },
+  measureLayout: (_node: unknown, done: (left: number, top: number) => void) => done(1, measuredRow++ * 30),
+});
+
+function render(text: string, streaming = false, variant: "document" | "compact" | "terminal" = "document", offset?: { current: number }) {
+  act(() => {
+    const markdown = React.createElement(ChatComposerContext.Provider, { value: { appendText } },
+      React.createElement(MarkdownView, { text, tokens, variant, streaming }));
+    const view = offset ? React.createElement(listContext().Provider,
+      { value: { getScrollMetrics: () => ({ offset: offset.current }) } }, markdown) : markdown;
+    if (renderer) renderer.update(view);
+    else renderer = TestRenderer.create(view, { createNodeMock });
+  });
+  return renderer!;
+}
+
+function buttons() {
+  return renderer!.root.findAll((node) => String(node.type) === "Pressable"
+    && ["Copy Markdown table", "Copied"].includes(node.props.accessibilityLabel));
+}
+
+afterEach(() => {
+  act(() => renderer?.unmount());
+  renderer = undefined;
+  copyText.mockClear();
+  toastShow.mockClear();
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+  motionSetting.reduced = false;
+  appendText.mockReset().mockReturnValue(true);
+  delete (globalThis as { __rnMockOS?: string }).__rnMockOS;
+});
+
+const selectionRow = () => renderer!.root.findAll((node) => String(node.type) === "View"
+  && node.props.testID === "table-selection-menu-row")[0]!;
+
+describe("Markdown table copy", () => {
+  const cell = (index: number) => renderer!.root.findAll((node) => String(node.type) === "Text"
+    && node.props.testID === "markdown-table-cell")[index]!;
+  const selectedCopy = () => renderer!.root.findAll((node) => String(node.type) === "Pressable"
+    && node.props.accessibilityLabel === "Copy selected cell");
+  const animatedMenu = () => renderer!.root.findAll((node) => String(node.type) === "Animated.View"
+    && node.props.testID === "table-selection-menu-animation");
+  // The frame takes native touches and finds the cell under the finger.
+  const touchFrame = () => renderer!.root.findAll((node) => String(node.type) === "View"
+    && typeof node.props.onTouchStart === "function" && typeof node.props.onMoveShouldSetResponder === "function")[0]!;
+  const touch = (timestamp: number, pageX = 10, pageY = 10) => ({
+    nativeEvent: { timestamp, pageX, pageY, touches: [{}] },
+  });
+  /** A point inside cell `index` of a two-column table, counted across rows from the header. */
+  const inside = (index: number) => {
+    const column = index % 2;
+    const left = 1 + (column === 0 ? 0 : StyleSheet.flatten(cell(0).props.style).width as number);
+    return { x: left + 5, y: 100 + Math.floor(index / 2) * 30 + 10 };
+  };
+  const touchAt = (index: number, timestamp: number, dx = 0, dy = 0) =>
+    touch(timestamp, inside(index).x + dx, inside(index).y + dy);
+  const tap = (index: number, timestamp: number) => {
+    act(() => touchFrame().props.onTouchStart(touchAt(index, timestamp)));
+    act(() => touchFrame().props.onTouchEnd(touchAt(index, timestamp + 30)));
+  };
+
+  it.each(["ios", "android"])("on %s adds the complete selected cell as a quote and dismisses", (os) => {
+    (globalThis as { __rnMockOS?: string }).__rnMockOS = os;
+    render("| A | B |\n| --- | --- |\n| **bold** and `code` | two |");
+    tap(2, 100); tap(2, 230);
+    const add = renderer!.root.findAll((node) => String(node.type) === "Pressable"
+      && node.props.accessibilityLabel === "Add to chat")[0]!;
+    expect(add.findAll((node) => String(node.type) === "Icon")[0]!.props.name).toBe("MessageSquarePlus");
+    expect(selectedCopy()[0]!.findAll((node) => String(node.type) === "Icon")[0]!.props.name).toBe("Copy");
+    act(() => selectionRow().props.onLayout({ nativeEvent: { layout: { width: 240 } } }));
+    const slot = renderer!.root.findAll((node) => String(node.type) === "View"
+      && node.props.testID === "table-native-copy-slot")[0]!;
+    expect(StyleSheet.flatten(slot.props.style).width).toBe(242);
+    act(() => add.props.onPress());
+    expect(appendText).toHaveBeenCalledExactlyOnceWith("> bold and code\n\n");
+    expect(copyText).not.toHaveBeenCalled();
+    expect(selectedCopy()).toHaveLength(0);
+  });
+
+  it("quotes every line of a multiline cell, including empty lines", () => {
+    expect(quoteCell("first\n\nlast")).toBe("> first\n>\n> last\n\n");
+  });
+
+  it("keeps the selected cell when its composer cannot accept text", () => {
+    appendText.mockReturnValue(false);
+    render("| A | B |\n| --- | --- |\n| one | two |");
+    tap(2, 100); tap(2, 230);
+    act(() => renderer!.root.findAll((node) => String(node.type) === "Pressable"
+      && node.props.accessibilityLabel === "Add to chat")[0]!.props.onPress());
+    expect(selectedCopy()).toHaveLength(1);
+    expect(copyText).not.toHaveBeenCalled();
+  });
+
+  it.each([0, 2])("on iOS selects all rendered text of cell %s on a double tap and copies it", async (index) => {
+    const runs = captureAnimations();
+    render("| Header words | B |\n| --- | --- |\n| **bold** and `code` | two |");
+    tap(index, 100);
+    expect(selectedCopy()).toHaveLength(0);
+    tap(index, 230);
+    expect(selectedCopy()).toHaveLength(1);
+    expect(tokens.selectionFill).toBe("rgba(27, 27, 31, 0.06)");
+    expect(tokens.selectionFill).not.toBe(tokens.accentBg);
+    expect(StyleSheet.flatten(cell(index).props.style).backgroundColor).toBe(tokens.selectionFill);
+    const menu = selectedCopy()[0]!;
+    let corner = menu.parent!;
+    while (StyleSheet.flatten(corner.props.style).position !== "absolute") corner = corner.parent!;
+    expect(StyleSheet.flatten(corner.props.style)).toMatchObject({ top: 0, left: 0 });
+    expect(menu.findAll((node) => String(node.type) === "Icon")[0]!.props.name).toBe("Copy");
+    await act(async () => selectedCopy()[0]!.props.onPress());
+    expect(copyText).toHaveBeenCalledExactlyOnceWith(index === 0 ? "Header words" : "bold and code");
+    expect(selectedCopy()).toHaveLength(0);
+    finishExit(runs);
+    expect(buttons()).toHaveLength(1);
+    expect(StyleSheet.flatten(cell(index).props.style).backgroundColor).not.toBe(tokens.selectionFill);
+  });
+
+  it.each([
+    ["light header", "#ffffff", "#ececee", "#1b1b1f", "#3b6fe0", "rgba(27, 27, 31, 0.06)", "#e4e4e6", 0],
+    ["light body", "#ffffff", "#ececee", "#1b1b1f", "#3b6fe0", "rgba(27, 27, 31, 0.06)", "#e4e4e6", 2],
+    ["dark header", "#18181b", "#2e2e32", "#f2f3f5", "#82aaff", "rgba(242, 243, 245, 0.08)", "#36363a", 0],
+    ["dark body", "#18181b", "#2e2e32", "#f2f3f5", "#82aaff", "rgba(242, 243, 245, 0.08)", "#36363a", 2],
+  ] as const)("distinguishes grey selection from the stronger %s", (_theme, surface0, surface2, foreground, accent, fill, headerFill, index) => {
+    const themed = buildThemeTokens({ ...colors, surface0, surface2, foreground, accent });
+    expect(buildThemeTokens({ ...colors, surface0, foreground, accent: "#e05030" }).selectionFill).toBe(fill);
+    act(() => {
+      renderer = TestRenderer.create(React.createElement(MarkdownView, {
+        text: "| A | B |\n| --- | --- |\n| one | two |", tokens: themed,
+        variant: "document", streaming: false,
+      }), { createNodeMock });
+    });
+    const original = StyleSheet.flatten(cell(index).props.style);
+    const unselected = StyleSheet.flatten(cell(index + 1).props.style);
+    let header = cell(0).parent!;
+    while (String(header.type) !== "View") header = header.parent!;
+    expect(StyleSheet.flatten(header.props.style).backgroundColor).toBe(headerFill);
+    tap(index, 100); tap(index, 230);
+    expect(themed.selectionFill).toBe(fill);
+    expect(StyleSheet.flatten(cell(index).props.style)).toEqual({ ...original, backgroundColor: fill });
+    expect(StyleSheet.flatten(cell(index + 1).props.style)).toEqual(unselected);
+    expect(StyleSheet.flatten(header.props.style).backgroundColor).toBe(headerFill);
+    const switched = buildThemeTokens({ ...colors, surface0: surface0 === "#ffffff" ? "#18181b" : "#ffffff",
+      foreground, accent });
+    act(() => renderer!.update(React.createElement(MarkdownView, {
+      text: "| A | B |\n| --- | --- |\n| one | two |", tokens: switched,
+      variant: "document", streaming: false,
+    })));
+    expect(switched.isDark).toBe(!themed.isDark);
+    expect(StyleSheet.flatten(cell(index).props.style).backgroundColor).toBe(switched.selectionFill);
+    expect(switched.selectionFill).not.toBe(fill);
+  });
+
+  it("expands the corner into Copy selected without adding any content below the table", () => {
+    const previousLanguage = getEnhancerPreferences().language;
+    updateEnhancerPreferences({ language: "zh" });
+    try {
+      render("| A | B |\n| --- | --- |\n| one | two |");
+      const outer = () => renderer!.root.findAll((node) => String(node.type) === "View"
+        && StyleSheet.flatten(node.props.style).position === "relative")[0]!;
+      const childCount = outer().children.length;
+      tap(2, 100);
+      tap(2, 230);
+      expect(outer().children).toHaveLength(childCount);
+      expect(selectedCopy()[0]!.findAll((node) => String(node.type) === "Text")[0]!.children).toEqual(["复制选中"]);
+      expect(StyleSheet.flatten(animatedMenu()[0]!.props.style)).toMatchObject({ height: 30, position: "absolute" });
+    } finally { act(() => { updateEnhancerPreferences({ language: previousLanguage }); }); }
+  });
+
+  function captureAnimations() {
+    const runs: Array<{ config: { toValue: number; duration: number; useNativeDriver: boolean };
+      finish?: (result: { finished: boolean }) => void; stop: ReturnType<typeof vi.fn> }> = [];
+    vi.spyOn(Animated, "timing").mockImplementation((...args: unknown[]) => {
+      const run = { config: args[1] as (typeof runs)[number]["config"],
+        finish: undefined as (typeof runs)[number]["finish"], stop: vi.fn() };
+      runs.push(run);
+      return { start: (finish?: (typeof runs)[number]["finish"]) => { run.finish = finish; }, stop: run.stop, reset() {} };
+    });
+    return runs;
+  }
+
+  /** The frame's exit is the second to last animation started. */
+  function finishExit(runs: ReturnType<typeof captureAnimations>) {
+    act(() => runs.at(-2)!.finish!({ finished: true }));
+  }
+
+  // Under the menu the closed button is not mounted at all: nothing to see,
+  // reach or announce until the frame has shrunk back over its place.
+  const expectCopyButtonHidden = (hidden: boolean) => {
+    expect(buttons()).toHaveLength(hidden ? 0 : 1);
+  };
+
+  it("does not leave an expanded background behind the shrinking native menu", () => {
+    const runs = captureAnimations();
+    render("| A | B |\n| --- | --- |\n| one | two |");
+    tap(2, 100); tap(2, 230);
+    act(() => selectionRow().props.onLayout({ nativeEvent: { layout: { width: 96 } } }));
+    act(() => renderer!.root.findAll((node) => String(node.type) === "ScrollView")[0]!.props.onScrollBeginDrag());
+    const menu = animatedMenu()[0]!;
+    const frame = StyleSheet.flatten(menu.props.style);
+    const width = frame.width as { setValue(value: number): void; __value: number };
+    act(() => width.setValue(60));
+    expect(width.__value).toBe(60);
+    expect(frame.backgroundColor).toBe(tokens.surface0);
+    // The hit target stays expanded until exit ends, but must not paint it.
+    let ancestor = menu.parent!;
+    while (ancestor !== renderer!.root) {
+      if (String(ancestor.type) === "View") {
+        const style = StyleSheet.flatten(ancestor.props.style);
+        expect(style.backgroundColor).toBeUndefined();
+        if (style.position === "relative") break;
+      }
+      ancestor = ancestor.parent!;
+    }
+    // The closed control's backing returns with it, once the frame no longer covers its place.
+    const backing = () => renderer!.root.findAll((node) => String(node.type) === "View"
+      && StyleSheet.flatten(node.props.style).backgroundColor === tokens.surface0
+      && StyleSheet.flatten(node.props.style).width === 30
+      && StyleSheet.flatten(node.props.style).height === 30);
+    expect(backing()).toHaveLength(0);
+    act(() => runs.at(-2)!.finish!({ finished: true }));
+    expect(animatedMenu()).toHaveLength(0);
+    expect(backing()).toHaveLength(1);
+    expect(backing()[0]!.findAll((node) => node === buttons()[0])).toHaveLength(1);
+  });
+
+  it("keeps the underlying copy button hidden until the shrinking frame has finished", () => {
+    const runs = captureAnimations();
+    render("| A | B |\n| --- | --- |\n| one | two |");
+    expectCopyButtonHidden(false);
+    tap(2, 100); tap(2, 230);
+    act(() => selectionRow().props.onLayout({ nativeEvent: { layout: { width: 96 } } }));
+    expectCopyButtonHidden(true);
+    act(() => renderer!.root.findAll((node) => String(node.type) === "ScrollView")[0]!.props.onScrollBeginDrag());
+    expect(animatedMenu()).toHaveLength(1);
+    expectCopyButtonHidden(true);
+    const exit = runs.at(-2)!;
+    act(() => exit.finish!({ finished: false }));
+    expectCopyButtonHidden(true);
+    act(() => exit.finish!({ finished: true }));
+    expect(animatedMenu()).toHaveLength(0);
+    expectCopyButtonHidden(false);
+  });
+
+  it("animates the measured frame and label, retaining the menu until its exit finishes", () => {
+    const runs = captureAnimations();
+    render("| A | B |\n| --- | --- |\n| one | two |");
+    tap(2, 100);
+    tap(2, 230);
+    act(() => selectionRow().props.onLayout({ nativeEvent: { layout: { width: 96 } } }));
+    expect(runs.at(-2)!.config).toMatchObject({ toValue: 98, duration: 180, useNativeDriver: false });
+    const slot = () => renderer!.root.findAll((node) => String(node.type) === "View"
+      && node.props.testID === "table-native-copy-slot")[0]!;
+    // Native hit testing must reach the label outside the original 30pt icon.
+    expect(StyleSheet.flatten(slot().props.style).width).toBe(98);
+    expect(runs.at(-1)!.config).toMatchObject({ toValue: 1, duration: 140, useNativeDriver: true });
+    act(() => renderer!.root.findAll((node) => String(node.type) === "ScrollView")[0]!.props.onScrollBeginDrag());
+    expect(selectedCopy()).toHaveLength(0);
+    expect(animatedMenu()).toHaveLength(1);
+    expect(animatedMenu()[0]!.props.pointerEvents).toBe("none");
+    expect(runs.at(-2)!.config).toMatchObject({ toValue: 30, duration: 160 });
+    expect(runs.at(-1)!.config).toMatchObject({ toValue: 0, duration: 80 });
+    act(() => runs.at(-2)!.finish!({ finished: true }));
+    expect(animatedMenu()).toHaveLength(0);
+    expect(StyleSheet.flatten(slot().props.style).width).toBe(30);
+    expect(buttons()).toHaveLength(1);
+  });
+
+  it("reverses an interrupted exit without letting its obsolete completion remove the reopened menu", () => {
+    const runs = captureAnimations();
+    render("| A | B |\n| --- | --- |\n| one | two |");
+    tap(2, 100); tap(2, 230);
+    act(() => selectionRow().props.onLayout({ nativeEvent: { layout: { width: 96 } } }));
+    act(() => renderer!.root.findAll((node) => String(node.type) === "ScrollView")[0]!.props.onScrollBeginDrag());
+    const exit = runs.at(-2)!;
+    tap(2, 500); tap(2, 630);
+    expect(exit.stop).toHaveBeenCalled();
+    act(() => exit.finish!({ finished: true }));
+    expect(selectedCopy()).toHaveLength(1);
+    expect(animatedMenu()).toHaveLength(1);
+    expect(runs.at(-2)!.config.toValue).toBe(98);
+    expectCopyButtonHidden(true);
+  });
+
+  it("switches instantly when reduced motion is enabled", () => {
+    motionSetting.reduced = true;
+    const runs = captureAnimations();
+    render("| A | B |\n| --- | --- |\n| one | two |");
+    tap(2, 100); tap(2, 230);
+    act(() => selectionRow().props.onLayout({ nativeEvent: { layout: { width: 96 } } }));
+    expect(runs).toHaveLength(0);
+    expect((StyleSheet.flatten(animatedMenu()[0]!.props.style).width as { __value: number }).__value).toBe(98);
+    expectCopyButtonHidden(true);
+    act(() => renderer!.root.findAll((node) => String(node.type) === "ScrollView")[0]!.props.onScrollBeginDrag());
+    expect(animatedMenu()).toHaveLength(0);
+    expectCopyButtonHidden(false);
+  });
+
+  it("restores the corner icon when the native page scrolls and stops observing once closed", () => {
+    const frames = new Map<number, () => void>();
+    let next = 0;
+    vi.stubGlobal("requestAnimationFrame", (callback: () => void) => { frames.set(++next, callback); return next; });
+    vi.stubGlobal("cancelAnimationFrame", (id: number) => frames.delete(id));
+    const offset = { current: 100 };
+    const runs = captureAnimations();
+    render("| A | B |\n| --- | --- |\n| one | two |", false, "document", offset);
+    expect(frames.size).toBe(0);
+    tap(2, 100);
+    tap(2, 230);
+    expect(selectedCopy()).toHaveLength(1);
+    expect(frames.size).toBe(1);
+    offset.current = 120;
+    act(() => { const [id, callback] = [...frames.entries()][0]!; frames.delete(id); callback(); });
+    expect(selectedCopy()).toHaveLength(0);
+    finishExit(runs);
+    expect(buttons()).toHaveLength(1);
+    expect(frames.size).toBe(0);
+  });
+
+  it("restores the corner icon when the table starts scrolling sideways", () => {
+    const runs = captureAnimations();
+    render("| A | B |\n| --- | --- |\n| one | two |");
+    tap(2, 100);
+    tap(2, 230);
+    const scroller = renderer!.root.findAll((node) => String(node.type) === "ScrollView")[0]!;
+    expect(scroller.props.showsHorizontalScrollIndicator).toBe(true);
+    act(() => scroller.props.onScrollBeginDrag());
+    expect(selectedCopy()).toHaveLength(0);
+    finishExit(runs);
+    expect(buttons()).toHaveLength(1);
+  });
+
+  it("on iOS does not combine taps on different cells, delayed taps, holds, or scrolling gestures", () => {
+    render("| A | B |\n| --- | --- |\n| one | two |");
+    tap(2, 100);
+    tap(3, 230);
+    expect(selectedCopy()).toHaveLength(0);
+    tap(3, 700);
+    expect(selectedCopy()).toHaveLength(0);
+    act(() => touchFrame().props.onTouchStart(touchAt(3, 800)));
+    act(() => touchFrame().props.onTouchMove(touchAt(3, 820, 20)));
+    act(() => touchFrame().props.onTouchEnd(touchAt(3, 850, 20)));
+    tap(3, 900);
+    expect(selectedCopy()).toHaveLength(0);
+    act(() => touchFrame().props.onTouchStart(touchAt(3, 1000)));
+    act(() => touchFrame().props.onTouchEnd(touchAt(3, 1400)));
+    tap(3, 1500);
+    expect(selectedCopy()).toHaveLength(0);
+  });
+
+  it.each(["ios", "android"])("on %s holds a cell, drags a range across rows and columns, then offers to copy it", async (os) => {
+    (globalThis as { __rnMockOS?: string }).__rnMockOS = os;
+    vi.useFakeTimers();
+    vi.stubGlobal("requestAnimationFrame", () => 1);
+    vi.stubGlobal("cancelAnimationFrame", () => {});
+    const setNativeProps = vi.fn();
+    const handleSetJSResponder = vi.fn();
+    const flushOperations = vi.fn();
+    vi.spyOn(TurboModuleRegistry, "get").mockImplementation(((name: string) =>
+      name === "RNGestureHandlerModule" ? { handleSetJSResponder, flushOperations } : null) as typeof TurboModuleRegistry.get);
+    const list = { getScrollMetrics: () => ({ offset: 0 }),
+      getOutermostParentListRef: () => ({ getScrollRef: () => ({ getNativeScrollRef: () => ({ setNativeProps }) }) }) };
+    // The frame sits at (0, 100) on the page; its rows, measured in order, are 30 tall.
+    let row = 0;
+    const setIsJSResponder = vi.fn();
+    vi.stubGlobal("nativeFabricUIManager", { setIsJSResponder });
+    const createNodeMock = () => ({
+      __internalInstanceHandle: { stateNode: { node: "shadow" } },
+      measure: (done: (...args: number[]) => void) => { row = 0; done(0, 0, 300, 90, 0, 100); },
+      measureLayout: (_node: unknown, done: (left: number, top: number) => void) => done(1, row++ * 30),
+    });
+    act(() => {
+      renderer = TestRenderer.create(React.createElement(listContext().Provider, { value: list },
+        React.createElement(MarkdownView, { text: "| A | B |\n| --- | --- |\n| one | two |\n| three | four |", tokens,
+          variant: "document", streaming: false })), { createNodeMock });
+    });
+    const highlighted = () => renderer!.root.findAll((node) => String(node.type) === "Text"
+      && node.props.testID === "markdown-table-cell"
+      && StyleSheet.flatten(node.props.style).backgroundColor === tokens.selectionFill).map((node) => node.children.join(""));
+    const scroller = () => renderer!.root.findAll((node) => node.props.horizontal === true)[0]!;
+    expect(touchFrame().props.onMoveShouldSetResponder()).toBe(false);
+    act(() => touchFrame().props.onTouchStart(touch(0, 5, 140)));
+    act(() => { vi.advanceTimersByTime(350); });
+    expect(highlighted()).toEqual(["one"]);
+    expect(setNativeProps).toHaveBeenLastCalledWith({ scrollEnabled: false });
+    if (os === "ios") {
+      // Gesture Handler fails the host's pans itself once its call is flushed.
+      expect(handleSetJSResponder).toHaveBeenCalledExactlyOnceWith(-1, true);
+      expect(flushOperations).toHaveBeenCalledAfter(handleSetJSResponder);
+      expect(setIsJSResponder).not.toHaveBeenCalled();
+    } else {
+      // Its call crashes on Android; the frame becomes the blocking responder instead.
+      expect(handleSetJSResponder).not.toHaveBeenCalled();
+      expect(setIsJSResponder).toHaveBeenCalledExactlyOnceWith("shadow", true, true);
+    }
+    expect(scroller().props.scrollEnabled).toBe(false);
+    expect(touchFrame().props.onMoveShouldSetResponder()).toBe(true);
+    expect(touchFrame().props.onResponderTerminationRequest()).toBe(false);
+    expect(selectedCopy()).toHaveLength(0);
+    act(() => touchFrame().props.onTouchMove(touch(400, 2000, 165)));
+    expect(highlighted()).toEqual(["one", "two", "three", "four"]);
+    expect(selectedCopy()).toHaveLength(0);
+    act(() => touchFrame().props.onTouchEnd(touch(500, 2000, 165)));
+    expect(setNativeProps).toHaveBeenLastCalledWith({ scrollEnabled: true });
+    if (os === "android") expect(setIsJSResponder).toHaveBeenLastCalledWith("shadow", false, false);
+    expect(scroller().props.scrollEnabled).toBe(true);
+    expect(touchFrame().props.onMoveShouldSetResponder()).toBe(false);
+    expect(selectedCopy()).toHaveLength(1);
+    vi.useRealTimers();
+    await act(async () => selectedCopy()[0]!.props.onPress());
+    expect(copyText).toHaveBeenCalledExactlyOnceWith("| A | B |\n| --- | --- |\n| one | two |\n| three | four |");
+    expect(highlighted()).toEqual([]);
+  });
+
+  it("on iOS lets a held finger that drifts before the hold scroll instead", () => {
+    vi.useFakeTimers();
+    render("| A | B |\n| --- | --- |\n| one | two |");
+    act(() => touchFrame().props.onTouchStart(touchAt(2, 0)));
+    act(() => touchFrame().props.onTouchMove(touchAt(2, 100, 0, 30)));
+    act(() => { vi.advanceTimersByTime(350); });
+    expect(touchFrame().props.onMoveShouldSetResponder()).toBe(false);
+    act(() => touchFrame().props.onTouchEnd(touchAt(2, 500, 0, 30)));
+    expect(selectedCopy()).toHaveLength(0);
+  });
+
+  it("on iOS clears the cell selection when streaming changes its source", () => {
+    const source = "| A | B |\n| --- | --- |\n| one | two |";
+    render(source, true);
+    tap(2, 100);
+    tap(2, 230);
+    expect(selectedCopy()).toHaveLength(1);
+    render(source + "\n| three | four |", true);
+    expect(selectedCopy()).toHaveLength(0);
+  });
+
+  it.each([
+    ["zh", "复制 Markdown 表格", "已复制"],
+    ["en", "Copy Markdown table", "Copied"],
+  ] as const)("shows a delayed hover label in %s and hides it on exit", async (language, label, copied) => {
+    vi.useFakeTimers();
+    const previousLanguage = getEnhancerPreferences().language;
+    updateEnhancerPreferences({ language });
+    try {
+      render("| A | B |\n| --- | --- |\n| one | two |");
+      const labels = () => renderer!.root.findAll((node) => String(node.type) === "Text"
+        && (node.children[0] === label || node.children[0] === copied));
+      expect(labels()).toHaveLength(0);
+      expect(StyleSheet.flatten(buttons()[0]!.props.style)).toMatchObject({
+        width: 30, height: 30, borderWidth: 1, borderRadius: 15, borderColor: tokens.v2.border,
+      });
+      act(() => { buttons()[0]!.props.onHoverIn(); });
+      // The frame's edge stays light on hover: only the fill marks it.
+      expect(StyleSheet.flatten(buttons()[0]!.props.style)).toMatchObject({ borderColor: tokens.v2.border });
+      expect(StyleSheet.flatten(buttons()[0]!.findByProps({ testID: "toolbar-icon-fill" }).props.style)).toMatchObject({ width: 24, height: 24, borderRadius: 12, backgroundColor: tokens.v2.surface2 });
+      act(() => { vi.advanceTimersByTime(TOOLBAR_TOOLTIP_MS - 1); });
+      expect(labels()).toHaveLength(0);
+      act(() => { vi.advanceTimersByTime(1); });
+      expect(labels()[0]!.children).toEqual([label]);
+      let slot = labels()[0]!.parent!;
+      while (slot.props.pointerEvents !== "none") slot = slot.parent!;
+      expect(StyleSheet.flatten(slot.props.style)).toMatchObject({ left: 0, top: "100%" });
+      await act(async () => { buttons()[0]!.props.onPress(); });
+      expect(labels()[0]!.children).toEqual([copied]);
+      act(() => { buttons()[0]!.props.onHoverOut(); });
+      expect(labels()).toHaveLength(0);
+      expect(StyleSheet.flatten(buttons()[0]!.props.style).borderColor).toBe(tokens.v2.border);
+      act(() => { buttons()[0]!.props.onHoverIn(); });
+      act(() => { buttons()[0]!.props.onHoverOut(); });
+      act(() => { vi.advanceTimersByTime(TOOLBAR_TOOLTIP_MS); });
+      expect(labels()).toHaveLength(0);
+    } finally {
+      act(() => { updateEnhancerPreferences({ language: previousLanguage }); });
+    }
+  });
+
+  it.each([
+    ["zh", "已复制 Markdown 表格"],
+    ["en", "Copied Markdown table"],
+  ] as const)("names the copied Markdown table in %s", async (language, message) => {
+    const previousLanguage = getEnhancerPreferences().language;
+    updateEnhancerPreferences({ language });
+    try {
+      render("| A | B |\n| --- | --- |\n| one | two |");
+      await act(async () => { buttons()[0]!.props.onPress(); });
+      expect(toastShow).toHaveBeenCalledExactlyOnceWith(message);
+    } finally {
+      act(() => { updateEnhancerPreferences({ language: previousLanguage }); });
+    }
+  });
+
+  it.each(["document", "compact", "terminal"] as const)(
+    "%s copies the entire table source with formatting and alignment",
+    async (variant) => {
+      const source = "| Name | Value |\n| :--- | ---: |\n| **bold** | `a\\|b` |\n| [link](https://example.com) | 42 |\n";
+      render(source, false, variant);
+      expect(buttons()).toHaveLength(1);
+      const button = buttons()[0]!;
+      // The copy control floats at the frame's corner, outside the header row.
+      let cell = button.parent!;
+      while (StyleSheet.flatten(cell.props.style).position !== "absolute") cell = cell.parent!;
+      expect(StyleSheet.flatten(cell.props.style)).toMatchObject({ position: "absolute", top: 0, left: 0 });
+      expect(cell.findAll((node) => String(node.type) === "Text")).toHaveLength(0);
+      await act(async () => { button.props.onPress(); });
+      expect(copyText).toHaveBeenCalledExactlyOnceWith(source);
+      expect(buttons()[0]!.props.accessibilityLabel).toBe("Copied");
+    },
+  );
+
+  it.each(["document", "compact", "terminal"] as const)(
+    "%s keeps identical columns the same width without copy space",
+    (variant) => {
+      const source = "| Same header | Same header |\n| --- | --- |\n| x | x |";
+      const table = lexBlock(source).find((token) => token.type === "table") as TableToken;
+      const widths = columnWidths(table, variantMetrics(variant, tokens.typography.content.size));
+      expect(widths[1]! - widths[0]!).toBe(TABLE_DIVIDER_WIDTH);
+      const view = render(source, false, variant);
+      const headers = view.root.findAll((node) => String(node.type) === "Text"
+        && node.children[0] === "Same header");
+      expect(headers).toHaveLength(2);
+      expect(headers.map((node) => StyleSheet.flatten(node.props.style).width)).toEqual(widths);
+      const headerRow = (node: (typeof headers)[number]) => {
+        let parent = node.parent!;
+        while (String(parent.type) !== "View") parent = parent.parent!;
+        return parent;
+      };
+      expect(headerRow(headers[0]!)).toBe(headerRow(headers[1]!));
+    },
+  );
+
+  it("copies each table separately, excluding surrounding prose", async () => {
+    const first = "| A | B |\n| --- | --- |\n| one | two |\n";
+    const second = "| C | D |\n| --- | --- |\n| three | four |\n";
+    render(`Before\n\n${first}\nBetween\n\n${second}\nAfter`);
+    expect(buttons()).toHaveLength(2);
+    await act(async () => { buttons()[0]!.props.onPress(); });
+    await act(async () => { buttons()[1]!.props.onPress(); });
+    expect(copyText.mock.calls.map(([text]) => text)).toEqual([first.trimEnd(), second.trimEnd()]);
+  });
+
+  it("copies the latest rows during streaming and after completion", async () => {
+    const header = "| A | B |\n| --- | --- |\n";
+    render(header, true);
+    await act(async () => { buttons()[0]!.props.onPress(); });
+    expect(copyText).toHaveBeenLastCalledWith(header.trimEnd());
+    const updated = header + "| one | two |\n";
+    render(updated, true);
+    await act(async () => { buttons()[0]!.props.onPress(); });
+    expect(copyText).toHaveBeenLastCalledWith(updated);
+    const completed = updated + "| three | four |\n";
+    render(completed);
+    await act(async () => { buttons()[0]!.props.onPress(); });
+    expect(copyText).toHaveBeenLastCalledWith(completed);
+  });
+});

@@ -1,0 +1,219 @@
+{
+  "retrievedAt": "2026-11-24",
+  "agents": {
+    "agoragentic-acp": {
+      "package": "agoragentic-mcp@1.3.0",
+      "source": "https://registry.npmjs.org/agoragentic-mcp/1.3.0",
+      "bin": {
+        "agoragentic-mcp": "mcp-server.js"
+      },
+      "engines": {
+        "node": ">=18.0.0"
+      }
+    },
+    "auggie": {
+      "package": "@augmentcode/auggie@0.37.0",
+      "source": "https://registry.npmjs.org/@augmentcode/auggie/0.37.0",
+      "bin": {
+        "auggie": "augment.mjs"
+      },
+      "engines": {
+        "node": ">=20.0.0"
+      }
+    },
+    "bob": {
+      "package": "@ibm/bob@2.1.0",
+      "source": "https://registry.npmjs.org/@ibm/bob/2.1.0",
+      "bin": {
+        "bob": "dist/bob.js"
+      },
+      "engines": {
+        "node": ">=22.15.0"
+      }
+    },
+    "claude-acp": {
+      "package": "@agentclientprotocol/claude-agent-acp@0.110.0",
+      "source": "https://registry.npmjs.org/@agentclientprotocol/claude-agent-acp/0.110.0",
+      "bin": {
+        "claude-agent-acp": "dist/index.js"
+      },
+      "engines": {
+        "node": ">=22"
+      }
+    },
+    "cline": {
+      "package": "cline@3.0.75",
+      "source": "https://registry.npmjs.org/cline/3.0.75",
+      "bin": {
+        "cline": "bin/cline"
+      }
+    },
+    "codebuddy-code": {
+      "package": "@tencent-ai/codebuddy-code@2.185.0",
+      "source": "https://registry.npmjs.org/@tencent-ai/codebuddy-code/2.185.0",
+      "bin": {
+        "cbc": "./bin/codebuddy",
+        "codebuddy": "./bin/codebuddy",
+        "cbc-prewarm": "./bin/cbc-prewarm",
+        "codebuddy-code": "./bin/codebuddy",
+        "codebuddy-lowmem": "./bin/codebuddy-lowmem"
+      }
+    },
+    "codex-acp": {
+      "package": "@agentclientprotocol/codex-acp@2.10.0",
+      "source": "https://registry.npmjs.org/@agentclientprotocol/codex-acp/2.10.0",
+      "bin": {
+        "codex-acp": "dist/index.js"
+      }
+    },
+    "deepagents": {
+      "package": "deepagents-acp@0.1.7",
+      "source": "https://registry.npmjs.org/deepagents-acp/0.1.7",
+      "bin": {
+        "deepagents-acp": "dist/cli.js"
+      }
+    },
+    "dimcode": {
+      "package": "dimcode@0.5.32",
+      "source": "https://registry.npmjs.org/dimcode/0.5.32",
+      "bin": {
+        "dim": "bin/dim.mjs",
+        "dimcode": "bin/dim.mjs"
+      }
+    },
+    "dirac": {
+      "package": "dirac-cli@0.6.1",
+      "source": "https://registry.npmjs.org/dirac-cli/0.6.1",
+      "bin": {
+        "dirac": "dist/cli.mjs"
+      },
+      "engines": {
+        "node": ">=22.13.0 <25.0.0"
+      }
+    },
+    "factory-droid": {
+      "package": "droid@1.18.0",
+      "source": "https://registry.npmjs.org/droid/1.18.0",
+      "bin": {
+        "droid": "bin/droid"
+      },
+      "engines": {
+        "node": ">=20.0.0"
+      }
+    },
+    "gemini": {
+      "package": "@google/gemini-cli@0.70.0",
+      "source": "https://registry.npmjs.org/@google/gemini-cli/0.70.0",
+      "bin": {
+        "gemini": "bundle/gemini.js"
+      },
+      "engines": {
+        "node": ">=20"
+      }
+    },
+    "github-copilot-cli": {
+      "package": "@github/copilot@1.0.114",
+      "source": "https://registry.npmjs.org/@github/copilot/1.0.114",
+      "bin": {
+        "copilot": "npm-loader.js"
+      }
+    },
+    "glm-acp-agent": {
+      "package": "glm-acp-agent@1.17.1",
+      "source": "https://registry.npmjs.org/glm-acp-agent/1.17.1",
+      "bin": {
+        "glm-acp-agent": "dist/index.js"
+      },
+      "engines": {
+        "node": "^20.19.0 || ^22.13.0 || >=24"
+      }
+    },
+    "grok-build": {
+      "package": "@xai-official/grok@1.0.93",
+      "source": "https://registry.npmjs.org/@xai-official/grok/1.0.93",
+      "bin": {
+        "grok": "bin/grok"
+      },
+      "engines": {
+        "node": ">=20"
+      }
+    },
+    "kilo": {
+      "package": "@kilocode/cli@7.8.32",
+      "source": "https://registry.npmjs.org/@kilocode/cli/7.8.32",
+      "bin": {
+        "kilo": "bin/kilo",
+        "kilocode": "bin/kilo"
+      }
+    },
+    "kimi-code": {
+      "package": "@moonshot-ai/kimi-code@2.7.3",
+      "source": "https://registry.npmjs.org/@moonshot-ai/kimi-code/2.7.3",
+      "bin": {
+        "kimi": "dist/main.mjs"
+      },
+      "engines": {
+        "node": ">=22.19.0"
+      }
+    },
+    "minimax-code": {
+      "package": "@minimax-ai/code-acp@0.7.9",
+      "source": "https://registry.npmjs.org/@minimax-ai/code-acp/0.7.9",
+      "bin": {
+        "code-acp": "acp.js"
+      },
+      "engines": {
+        "node": ">=22.19 <23 || >=24 <27"
+      }
+    },
+    "nova": {
+      "package": "@compass-ai/nova@1.1.68",
+      "source": "https://registry.npmjs.org/@compass-ai/nova/1.1.68",
+      "bin": {
+        "nova": "scripts/bin-wrapper.mjs",
+        "compass": "scripts/bin-wrapper.mjs"
+      },
+      "engines": {
+        "node": ">=22.13.0"
+      }
+    },
+    "pi-acp": {
+      "package": "pi-acp@0.0.35",
+      "source": "https://registry.npmjs.org/pi-acp/0.0.35",
+      "bin": {
+        "pi-acp": "dist/index.js"
+      },
+      "engines": {
+        "node": ">=20"
+      }
+    },
+    "qoder": {
+      "package": "@qoder-ai/qodercli@1.1.96",
+      "source": "https://registry.npmjs.org/@qoder-ai/qodercli/1.1.96",
+      "bin": {
+        "qoder": "bundle/qoder-npm-dispatcher.cjs",
+        "qodercli": "bundle/qodercli.js"
+      },
+      "engines": {
+        "node": ">=20.0.0"
+      }
+    },
+    "qwen-code": {
+      "package": "@qwen-code/qwen-code@0.28.4",
+      "source": "https://registry.npmjs.org/@qwen-code/qwen-code/0.28.4",
+      "bin": {
+        "qwen": "cli-entry.js"
+      },
+      "engines": {
+        "node": ">=22.0.0"
+      }
+    },
+    "sigit": {
+      "package": "@smbcloud/sigit@1.7.10",
+      "source": "https://registry.npmjs.org/@smbcloud/sigit/1.7.10",
+      "bin": {
+        "sigit": "lib/index.js"
+      }
+    }
+  }
+}

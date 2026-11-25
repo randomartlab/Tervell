@@ -1,0 +1,6 @@
+Paseo Cafe
+Source: https://github.com/paseo-cafe/paseo-cafe
+File: plugin/client/browse.ts
+Retrieved: 2026-11-20
+Licensed under Apache License 2.0.
+Adapted to Tervell structural catalog types; no Paseo daemon is modified or enabled.

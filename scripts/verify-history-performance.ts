@@ -1,0 +1,56 @@
+import { app } from 'electron'
+import { mkdtempSync, mkdirSync, readFileSync, appendFileSync, existsSync, statSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join, resolve } from 'node:path'
+import { writeJsonFileAtomic, writeTextFileAtomic } from '../apps/electron/src/main/lib/safe-file'
+const root = mkdtempSync(join(tmpdir(), 'tervell-history-performance-'))
+process.env.TERVELL_PROFILE_DIR = root
+app.setPath('userData', join(root, 'chromium'))
+;(app as typeof app & { setAppPath(path: string): void }).setAppPath(resolve('apps/electron'))
+app.commandLine.appendSwitch('use-mock-keychain')
+const assert = (value: unknown, message: string) => { if (!value) throw Error(message) }
+async function run() {
+  mkdirSync(join(root, 'config'), { recursive: true }); mkdirSync(join(root, 'project'))
+  writeJsonFileAtomic(join(root, 'config/agent-workspaces.json'), { version: 2, workspaces: [{ id: 'a', slug: 'a', name: '完整分叉验收', projectRootPath: join(root, 'project'), createdAt: 1, updatedAt: 1 }] })
+  const manager = await import('../apps/electron/src/main/lib/agent-session-manager')
+  const paths = await import('../apps/electron/src/main/lib/config-paths')
+  const source = manager.createAgentSession('长会话', undefined, 'a')
+  const sdk = await import('@earendil-works/pi-coding-agent')
+  const pi = sdk.SessionManager.create(join(root, 'project'), join(root, 'pi'))
+  pi.appendMessage({ role: 'user', content: '首条问题', timestamp: 1 })
+  const cut = pi.appendMessage({ role: 'assistant', content: [{ type: 'text', text: '完整回答' }], api: 'openai-completions', provider: 'openai', model: 'fixture', usage: { input: 1, output: 2, cacheRead: 0, cacheWrite: 0, totalTokens: 3, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } }, stopReason: 'stop', timestamp: 2 })
+  pi.appendMessage({ role: 'user', content: '分叉后不能出现', timestamp: 3 })
+  manager.updateAgentSessionMeta(source.id, { kernelId: 'pi', piSessionFile: pi.getSessionFile(), sdkSessionId: pi.getSessionId(), piEntryBindings: { cut } })
+  const longText = '完整长消息🙂'.repeat(80000)
+  const original = [{ type: 'user', uuid: 'q', message: { content: longText } }, { type: 'assistant', uuid: 'cut', message: { content: [{ type: 'text', text: '完整回答' }] } }, { type: 'user', uuid: 'later', message: { content: '分叉后不能出现' } }]
+  writeTextFileAtomic(paths.getAgentSessionMessagesPath(source.id), original.map(m => JSON.stringify(m)).join('\n') + '\n')
+  const before = readFileSync(paths.getAgentSessionMessagesPath(source.id))
+  const fork = await manager.forkAgentSession({ sessionId: source.id, upToMessageUuid: 'cut' })
+  const stored = manager.getAgentSessionSDKMessagesStrict(fork.id)
+  assert(stored.length === 2 && JSON.stringify(stored[0]).includes(longText), '分叉再次截断超大已存消息')
+  assert(readFileSync(paths.getAgentSessionMessagesPath(source.id)).equals(before), '源展示历史被改变')
+  assert(JSON.stringify(sdk.SessionManager.open(fork.piSessionFile!).buildSessionContext()).includes('完整回答'), '原生分叉不能恢复')
+  appendFileSync(paths.getAgentSessionMessagesPath(source.id), JSON.stringify({ type: 'result', uuid: 'usage', usage: { input_tokens: 10, output_tokens: 3, cache_read_input_tokens: 2 } }) + '\n')
+  const summary = manager.getAgentSessionUsageSummary(source.id)
+  assert(summary.total === 15 && summary.cached === 2 && manager.getAgentSessionUsageSummary(source.id) === summary, '用量缓存统计或复用错误')
+  appendFileSync(paths.getAgentSessionMessagesPath(source.id), JSON.stringify({ type: 'result', uuid: 'usage2', usage: { input_tokens: 5 } }) + '\n')
+  assert(manager.getAgentSessionUsageSummary(source.id).total === 20, '追加后用量摘要没有失效')
+  const chats = await import('../apps/electron/src/main/lib/conversation-manager')
+  const chat = chats.createConversation('长 Chat'), dest = chats.createConversation('分叉 Chat')
+  const attachmentRoot = paths.getConversationAttachmentsDir(chat.id)
+  writeTextFileAtomic(join(attachmentRoot, 'original.txt'), '附件完整数据')
+  const rows = Array.from({ length: 105 }, (_, index) => ({ id: 'chat-' + index, role: index % 2 ? 'assistant' : 'user', content: '完整历史 ' + index, reasoning: index % 2 ? '推理' : undefined, createdAt: index, ...(index === 0 ? { attachments: [{ id: 'asset', filename: '原文.txt', mediaType: 'text/plain', localPath: chat.id + '/original.txt', size: 18 }] } : {}) }))
+  writeTextFileAtomic(paths.getConversationMessagesPath(chat.id), rows.map(row => JSON.stringify(row)).join('\n') + '\n')
+  assert(chats.getRecentMessages(chat.id, 30).messages.map(row => row.id).join(',') === rows.slice(-30).map(row => row.id).join(','), '尾部环形分页记录错位')
+  await chats.copyConversationThrough(chat.id, dest.id, 'chat-80')
+  const output = chats.getConversationMessagesStrict(dest.id)
+  assert(output.length === 81 && output.at(-1)?.id === 'chat-80', 'Chat 分叉截断错误')
+  assert(output[0]?.attachments?.[0]?.localPath.startsWith(dest.id), 'Chat 分叉附件未复制')
+  chats.deleteConversation(chat.id)
+  assert(readFileSync(paths.resolveAttachmentPath(output[0]!.attachments![0]!.localPath), 'utf8') === '附件完整数据', '源会话删除后分叉附件失效')
+  assert(!existsSync(paths.getConversationMessagesPath(chat.id)) && statSync(paths.getConversationMessagesPath(dest.id)).size > 0, '源与分叉存储不独立')
+  console.log('HISTORY PERFORMANCE actual Pi fork cutoff/recovery, >256K message preserved, source immutable PASS')
+  console.log('USAGE summary cached, file append invalidates, exact totals PASS')
+  console.log('CHAT bounded recent reads, streaming fork, independent attachment after source deletion PASS')
+}
+app.whenReady().then(run).then(() => app.exit(0)).catch(error => { console.error(error); app.exit(1) })

@@ -1,0 +1,1502 @@
+/**
+ * On web, React Native Web draws `role="button"` as a `<button>`, and a
+ * button inside another is invalid HTML that the host turns into an error
+ * badge. The card and its subtask rows hold buttons, so they are focusable
+ * groups there; every button is a leaf.
+ */
+import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
+import { detailColors } from "../../client/tasks/cards/detail-charts";
+import { hoverFill } from "../../client/tasks/hover-fill";
+import React from "react";
+import { readFileSync } from "node:fs";
+
+vi.hoisted(() => {
+  (globalThis as { __rnMockOS?: string }).__rnMockOS = "web";
+  (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+});
+
+vi.mock("react-native", async () => import("./helpers/rn-mock"));
+const folder = vi.hoisted(() => ({
+  touch: false,
+  reveal: vi.fn<(_input: { cwd: string; path: string }) => Promise<{ revealed: string | null; error: string | null }>>(),
+  error: vi.fn(),
+}));
+vi.mock("@getpaseo/plugin/client", async (original) => ({
+  ...await original<object>(),
+  useRpc: () => folder.reveal,
+}));
+vi.mock("../../client/ui/use-input-capabilities", async (original) => ({
+  ...await original<object>(),
+  useInputCapabilities: () => ({ hover: !folder.touch, touch: folder.touch, compact: false, native: false }),
+}));
+
+/** The DOM hover bindings the cards make, by the bound element's testID or label. */
+const hovers = vi.hoisted(() => new Map<string, { enter(): void; leave(): void }>());
+
+/** The right-click handlers the cards bind, by the bound element's testID. */
+const contextMenus = vi.hoisted(() => new Map<string, (point: { x: number; y: number }, target: unknown) => void>());
+const copies = vi.hoisted(() => [] as string[]);
+const openDetailsLayer = vi.hoisted(() => vi.fn(() => () => {}));
+const optionExpansion = vi.hoisted(() => ({
+  clipped: false,
+  setExpanded: vi.fn(),
+  close: vi.fn(),
+  open: vi.fn(),
+}));
+
+vi.mock("../../client/web", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  openToolbarDetailsLayer: openDetailsLayer,
+  optionTextClipped: () => optionExpansion.clipped,
+  openOptionExpansion: (...args: unknown[]) => {
+    optionExpansion.open(...args);
+    return { setExpanded: optionExpansion.setExpanded, close: optionExpansion.close };
+  },
+  bindContextMenu: (node: { props?: Record<string, unknown> } | null, open: (point: { x: number; y: number }, target: unknown) => void) => {
+    const key = String(node?.props?.testID ?? "?");
+    contextMenus.set(key, open);
+    return () => contextMenus.delete(key);
+  },
+  bindRowHover: (node: { props?: Record<string, unknown> } | null, enter: () => void, leave: () => void) => {
+    const key = String(node?.props?.testID ?? node?.props?.accessibilityLabel ?? "?");
+    hovers.set(key, { enter, leave });
+    return () => hovers.delete(key);
+  },
+}));
+
+vi.mock("@getpaseo/plugin/client/ui", async () => {
+  const react = await import("react");
+  const rn = await import("./helpers/rn-mock");
+  return {
+    Icon: (props: Record<string, unknown>) => react.createElement("Icon", props),
+    Modal: Object.assign(
+      (props: Record<string, unknown> & { children?: React.ReactNode }) => props.open ? react.createElement("Modal", props, props.children) : null,
+      { Content: (props: Record<string, unknown> & { children?: React.ReactNode }) => react.createElement("ModalContent", props, props.children) },
+    ),
+    ScrollView: rn.ScrollView,
+    copyText: async (text: string) => {
+      copies.push(text);
+    },
+    useToast: () => ({ show() {}, error: folder.error }),
+  };
+});
+
+import "./helpers/quiet-renderer";
+import { asExitPlan } from "./helpers/plan-request";
+import TestRenderer, { act, type ReactTestInstance } from "react-test-renderer";
+import { CARD_PRESETS } from "../../shared/tasks-settings";
+import { previewSampleCards as sampleCards } from "../../client/tasks/sample-cards";
+import type { PermissionButton } from "../../client/tasks/actions";
+import { permissionButtons } from "../../client/tasks/actions";
+import { formatFooterStamp } from "../../client/ui/time";
+import type { TaskCard } from "../../client/tasks/model";
+import { DetailActionBar, TaskCardView, TaskDetailCards, taskTokens, type TaskCardViewProps } from "../../client/tasks/cards";
+import { BOARD_STRINGS } from "../../client/tasks/board/strings";
+import { CardButton } from "../../client/tasks/cards/action-buttons";
+import { ActionRow } from "../../client/tasks/cards/action-row";
+import { TasksTypographyScale } from "../../client/tasks/typography";
+import { OVERLAY_ROW_Z } from "../../client/tasks/cards/task-card";
+import { cardMenuSections, type CardMenuActions } from "../../client/tasks/cards/card-menu";
+import { cardStrings } from "../../client/tasks/cards/strings";
+import { MENU_FOCUS, menuKeyReducer, selectableItems, type MenuSection } from "../../client/tasks/board/menu-model";
+
+afterAll(() => {
+  delete (globalThis as { __rnMockOS?: string }).__rnMockOS;
+});
+
+const THEME = {
+  colors: {
+    surface0: "#ffffff",
+    surface1: "#f7f7f8",
+    surface2: "#efeff1",
+    border: "#e2e2e6",
+    foreground: "#1b1b1f",
+    foregroundMuted: "#6b6b75",
+    accent: "#3b6fe0",
+    accentForeground: "#ffffff",
+    statusSuccess: "#1f8a5b",
+    statusWarning: "#a36a00",
+    statusDanger: "#d93636",
+  },
+};
+
+const NOW = Date.parse("2026-10-20T09:00:00.000Z");
+const BUTTONS: PermissionButton[] = [
+  { key: "allow", label: "允许", variant: "primary", kind: "respond", action: { behavior: "allow", id: null } },
+  { key: "deny", label: "拒绝", variant: "secondary", kind: "respond", action: { behavior: "deny", id: null } },
+];
+
+function texts(root: ReactTestInstance): string[] {
+  return root
+    .findAll((node) => (node.type as unknown) === "Text")
+    .flatMap((node) => node.children.filter((child): child is string => typeof child === "string"));
+}
+
+/** A host element that draws as a native interactive element on web. */
+function isButton(node: ReactTestInstance): boolean {
+  if (typeof node.type !== "string") return false;
+  const role = node.props.role ?? node.props.accessibilityRole;
+  return role === "button" || role === "menuitem" || role === "link";
+}
+
+/** Labels of buttons that sit inside another button. */
+function nestedButtons(root: ReactTestInstance): string[] {
+  const found: string[] = [];
+  const walk = (node: ReactTestInstance, insideButton: boolean) => {
+    const button = isButton(node);
+    if (button && insideButton) found.push(String(node.props.accessibilityLabel ?? node.props.testID ?? node.type));
+    for (const child of node.children) {
+      if (typeof child !== "string") walk(child, insideButton || button);
+    }
+  };
+  walk(root, false);
+  return found;
+}
+
+function props(id: string, overrides: Partial<TaskCardViewProps> = {}): TaskCardViewProps {
+  return {
+    card: sampleCards(NOW).find((card) => card.id === id)!,
+    fields: { ...CARD_PRESETS.full.fields, labelLimit: CARD_PRESETS.full.labelLimit },
+    theme: THEME,
+    compact: false,
+    permissionButtons: [],
+    stopPhase: "idle",
+    focused: false,
+    highlighted: false,
+    now: NOW,
+    language: "zh",
+    onReveal: () => {},
+    onOpen: () => {},
+    onStop: () => {},
+    onPermission: () => {},
+    ...overrides,
+  };
+}
+
+async function render(element: React.ReactElement) {
+  let renderer!: TestRenderer.ReactTestRenderer;
+  await act(async () => {
+    // Host refs resolve to the element, so the hover mock can tell cards and rows apart.
+    renderer = TestRenderer.create(element, { createNodeMock: (node) => ({ props: node.props }) });
+  });
+  return renderer;
+}
+
+describe("TaskCardView on web", () => {
+  it("keeps question answers below the divider and the open action above it", async () => {
+    const card = sampleCards(NOW).find((item) => item.id === "sample-question")!;
+    const onOpen = vi.fn();
+    const onStop = vi.fn();
+    const element = (stopPhase: TaskCardViewProps["stopPhase"]) => React.createElement(TaskCardView, props(card.id, {
+      card, onOpen, onStop, stopPhase, permissionButtons: permissionButtons(card.permission!, "zh", true),
+    }));
+    const renderer = await render(element("idle"));
+    const nodes = renderer.root.findAll((node) => typeof node.type === "string");
+    const controls = nodes.find((node) => node.props.testID === "task-card-control-row")!;
+    const question = nodes.find((node) => node.props.testID === "task-card-permission")!;
+    const answers = nodes.find((node) => node.props.testID === "task-card-answer-actions")!;
+    expect(nodes.indexOf(controls)).toBeLessThan(nodes.indexOf(question));
+    const divider = question.find((node) => typeof node.type === "string" && node.props.testID === "task-card-question-divider");
+    expect(texts(divider)).toContain("待回答");
+    expect(answers.findAll((node) => typeof node.type === "string" && node.props.testID === "task-card-open-tab")).toHaveLength(0);
+    const open = controls.find((node) => typeof node.type === "string" && node.props.testID === "task-card-open-tab");
+    const stop = controls.find((node) => typeof node.type === "string" && node.props.accessibilityLabel === "停止");
+    await act(async () => stop.props.onPress());
+    expect(onStop).toHaveBeenCalledWith(card, { withChildren: false });
+    await act(async () => renderer.update(element("confirming")));
+    expect(renderer.root.findAll((node) => typeof node.type === "string" && node.props.accessibilityLabel === "确认停止")).toHaveLength(1);
+    await act(async () => open.props.onPress());
+    expect(onOpen).toHaveBeenCalledWith(card.id);
+    await act(async () => hovers.get(`task-card-${card.id}`)!.enter());
+    expect(renderer.root.findAll((node) => typeof node.type === "string" && node.props.testID === "task-card-open-tab")).toHaveLength(1);
+    await act(async () => renderer.unmount());
+  });
+
+  it("shows a keyboard focus outline on the plan and subtask buttons", async () => {
+    const todo = { completed: 0, total: 1, items: [{ text: "Task", completed: false }] };
+    const renderer = await render(React.createElement(TaskCardView, props("sample-running", { todo })));
+    for (const id of ["pill-todo", "pill-subtasks"]) {
+      const button = () => renderer.root.find((node) => typeof node.type === "string" && node.props.testID === id);
+      const style = () => Object.assign({}, ...[button().props.style].flat(Infinity).filter(Boolean));
+      await act(async () => button().props.onFocus({ target: { matches: () => true } }));
+      expect(style()).toMatchObject({ outlineStyle: "solid", outlineWidth: 1, outlineOffset: 2, outlineColor: taskTokens(THEME).foregroundMuted });
+      await act(async () => button().props.onBlur());
+      expect(style().outlineStyle).toBeUndefined();
+      await act(async () => button().props.onFocus({ target: { matches: () => false } }));
+      expect(style().outlineStyle).toBeUndefined();
+    }
+    await act(async () => renderer.unmount());
+  });
+
+  it.each([
+    ["#ffffff", "0px 2px 6px rgba(0, 0, 0, 0.14)"],
+    ["#181b1a", "0px 2px 6px rgba(0, 0, 0, 0.38)"],
+  ])("shares the hover shadow between cards and buttons on surface %s", (surface0, shadow) => {
+    const tokens = taskTokens({ colors: { ...THEME.colors, surface0 } });
+    expect(tokens.card.buttonShadowHover).toBe(shadow);
+    expect(tokens.card.shadowHover).toBe(shadow);
+  });
+  it("adds the card hover shadow to an action without losing its outline", async () => {
+    const tokens = taskTokens(THEME);
+    const element = (disabled = false) => React.createElement(CardButton, { label: "Open", look: "plain", tokens, compact: false, disabled, onPress: () => {} });
+    const renderer = await render(element());
+    const button = () => renderer.root.find((node) => typeof node.type === "string" && node.props.accessibilityLabel === "Open");
+    expect(button().props.style.boxShadow).toContain("inset");
+    await act(async () => button().props.onHoverIn());
+    expect(button().props.style.boxShadow).toContain(tokens.card.buttonShadowHover);
+    expect(button().props.style.boxShadow).toContain("inset");
+    await act(async () => button().props.onHoverOut());
+    expect(button().props.style.boxShadow).not.toContain(tokens.card.buttonShadowHover);
+    await act(async () => renderer.update(element(true)));
+    await act(async () => button().props.onHoverIn());
+    expect(button().props.style.boxShadow).not.toContain(tokens.card.buttonShadowHover);
+    await act(async () => renderer.unmount());
+  });
+  it("uses the card surface for error-dismiss hover", async () => {
+    const tokens = taskTokens(THEME);
+    const card = { ...sampleCards(NOW).find((item) => item.id === "sample-failed")!, error: "API error: limit reached" };
+    const renderer = await render(React.createElement(TaskCardView, props(card.id, { card, current: true })));
+    const button = () => renderer.root.find((node) => typeof node.type === "string" && node.props.accessibilityLabel === "关闭错误提示");
+    const style = () => Object.assign({}, ...[button().props.style].flat(Infinity).filter(Boolean));
+    expect(style().backgroundColor).toBe("transparent");
+    await act(async () => button().props.onHoverIn());
+    expect(style().backgroundColor).toBe(hoverFill(tokens.card.current, tokens.foreground, true, false));
+    expect(style().boxShadow).toBeUndefined();
+    await act(async () => button().props.onHoverOut());
+    expect(style().backgroundColor).toBe("transparent");
+    await act(async () => renderer.unmount());
+  });
+  it("uses the shared fill for bottom action bar hover", async () => {
+    const tokens = taskTokens(THEME);
+    const card = sampleCards(NOW).find((item) => item.id === "sample-running")!;
+    const element = (phase: "idle" | "stopping") => React.createElement(DetailActionBar, {
+      card, theme: THEME, language: "zh", strings: BOARD_STRINGS.zh.sidebar, onOpen: () => {}, stop: { phase, onPress: () => {} },
+    });
+    const renderer = await render(element("idle"));
+    const button = (id: string) => renderer.root.find((node) => typeof node.type === "string" && node.props.testID === id);
+    const flat = (style: unknown): Record<string, unknown> => {
+      if (Array.isArray(style)) return Object.assign({}, ...style.map(flat));
+      return style && typeof style === "object" ? style as Record<string, unknown> : {};
+    };
+    const look = (id: string) => flat(button(id).props.style);
+    expect(look("detail-bar-open").backgroundColor).toBe(tokens.card.background);
+    expect(String(look("detail-bar-open").boxShadow)).toContain(tokens.card.primaryBorder);
+    const openIcon = button("detail-bar-open").find((node) => (node.type as unknown) === "Icon" && node.props.name === "ArrowUpRight");
+    expect(openIcon.props.color).toBe(tokens.card.primaryText);
+    expect(String(look("detail-bar-open").boxShadow)).not.toContain(tokens.card.buttonShadowHover);
+    expect(look("detail-bar-open").transitionProperty).toBe("background-color, border-color, box-shadow, color, opacity");
+    await act(async () => button("detail-bar-open").props.onHoverIn());
+    expect(look("detail-bar-open").backgroundColor).toBe(detailColors(tokens).rowHover);
+    expect(String(look("detail-bar-open").boxShadow)).not.toContain(tokens.card.buttonShadowHover);
+    expect(String(look("detail-bar-open").boxShadow)).toContain("inset");
+    await act(async () => button("detail-bar-open").props.onHoverOut());
+    expect(look("detail-bar-open").backgroundColor).toBe(tokens.card.background);
+    expect(String(look("detail-bar-open").boxShadow)).not.toContain(tokens.card.buttonShadowHover);
+    await act(async () => button("detail-bar-stop").props.onHoverIn());
+    expect(look("detail-bar-stop").backgroundColor).toBe(detailColors(tokens).rowHover);
+    expect(String(look("detail-bar-stop").boxShadow)).not.toContain(tokens.card.buttonShadowHover);
+    await act(async () => renderer.update(element("stopping")));
+    await act(async () => button("detail-bar-stop").props.onHoverIn());
+    expect(look("detail-bar-stop").backgroundColor).toBe(tokens.card.background);
+    expect(look("detail-bar-stop").opacity).toBe(0.6);
+    expect(String(look("detail-bar-stop").boxShadow)).not.toContain(tokens.card.buttonShadowHover);
+    await act(async () => renderer.unmount());
+  });
+  it.each([false, true])("constrains long URL titles and retains two-line truncation (compact=%s)", async (compact) => {
+    const card = { ...props("sample-running").card, title: `https://roundreddot.feishu.cn/wiki/${"a".repeat(120)}` };
+    const renderer = await render(React.createElement(TaskCardView, props(card.id, { card, compact })));
+    const title = renderer.root.find((node) => typeof node.type === "string" && node.props.testID === "task-card-title");
+    const style = Object.assign({}, ...[title.props.style].flat(Infinity).filter(Boolean));
+    expect(style).toMatchObject({ flex: 1, minWidth: 0, overflowWrap: "anywhere" });
+    expect(title.props.numberOfLines).toBe(2);
+    expect(title.props.ellipsizeMode).toBe("tail");
+    expect(texts(title)).toEqual([card.title]);
+    await act(async () => renderer.unmount());
+  });
+
+  it("uses the device's configured title line limit", async () => {
+    const renderer = await render(React.createElement(TaskCardView, props("sample-running", { titleLines: 4 })));
+    const title = renderer.root.find((node) => typeof node.type === "string" && node.props.testID === "task-card-title");
+    expect(title.props.numberOfLines).toBe(4);
+    await act(async () => renderer.update(React.createElement(TaskCardView, props("sample-running", { titleLines: null }))));
+    expect(title.props.numberOfLines).toBeUndefined();
+    await act(async () => renderer.unmount());
+  });
+
+  it.each(["light", "dark"])("distinguishes keyboard focus from selection in the %s theme", async (appearance) => {
+    const theme = appearance === "light" ? THEME : {
+      colors: { ...THEME.colors, surface0: "#181b1a", surface1: "#1e2120", surface2: "#272a29", border: "#252b2a", foreground: "#fafafa", foregroundMuted: "#a1a5a4" },
+    };
+    const tokens = taskTokens(theme);
+    const renderer = await render(React.createElement(TaskCardView, props("sample-running", { theme, focused: true })));
+    const style = () => renderer.root.find((node) => typeof node.type === "string" && node.props.testID === "task-card-sample-running").props.style;
+    expect(style()).toMatchObject({ backgroundColor: tokens.card.background, borderColor: tokens.card.border, outlineStyle: "solid", outlineWidth: 1, outlineColor: tokens.foregroundMuted, outlineOffset: 2, boxShadow: tokens.card.shadow });
+    await act(async () => renderer.update(React.createElement(TaskCardView, props("sample-running", { theme, current: true }))));
+    expect(style()).toMatchObject({ backgroundColor: tokens.card.current, borderColor: tokens.card.currentBorder, boxShadow: tokens.card.shadow });
+    expect(style().outlineStyle).toBeUndefined();
+    await act(async () => renderer.update(React.createElement(TaskCardView, props("sample-running", { theme, current: true, focused: true }))));
+    expect(style()).toMatchObject({ backgroundColor: tokens.card.current, borderColor: tokens.card.currentBorder, outlineStyle: "solid", outlineWidth: 1, boxShadow: tokens.card.shadow });
+    await act(async () => renderer.unmount());
+  });
+
+  it("never nests a button inside another, on any card, desktop or phone", async () => {
+    for (const compact of [false, true]) {
+      for (const card of sampleCards(NOW)) {
+        const renderer = await render(
+          React.createElement(TaskCardView, props(card.id, { compact, permissionButtons: card.permission ? BUTTONS : [] })),
+        );
+        const root = renderer.root;
+        // Hover to show Stop, open the stop menu and the subtasks so every control is mounted.
+        const surface = root.find((node) => typeof node.type === "string" && node.props.testID === `task-card-${card.id}`);
+        await act(async () => surface.props.onHoverIn?.());
+        const menu = root.findAll((node) => typeof node.type === "string" && node.props.accessibilityLabel === "停止选项");
+        if (menu[0]) await act(async () => menu[0]!.props.onPress());
+        const toggle = root.findAll((node) => typeof node.type === "string" && node.props.accessibilityState?.expanded === false);
+        if (toggle[0]) await act(async () => toggle[0]!.props.onPress());
+        expect({ card: card.id, compact, nested: nestedButtons(root) }).toEqual({ card: card.id, compact, nested: [] });
+        await act(async () => renderer.unmount());
+      }
+    }
+  });
+
+  it("keeps the card a focusable, pressable group, and its subtask rows too", async () => {
+    const onOpen = vi.fn();
+    const onReveal = vi.fn();
+    const renderer = await render(React.createElement(TaskCardView, props("sample-running", { onOpen, onReveal })));
+    const root = renderer.root;
+    const surface = root.find((node) => typeof node.type === "string" && node.props.testID === "task-card-sample-running");
+    expect(surface.props.role).toBe("group");
+    expect(surface.props.accessibilityRole).toBeUndefined();
+    expect(surface.props.focusable).not.toBe(false);
+    expect(surface.props.disabled).toBeFalsy();
+    surface.props.onPress();
+    expect(onOpen).toHaveBeenCalledWith("sample-running");
+
+    const toggle = root.find((node) => typeof node.type === "string" && node.props.accessibilityState?.expanded === false);
+    await act(async () => toggle.props.onPress());
+    const row = root.find((node) => typeof node.type === "string" && node.props.accessibilityLabel === "Measure the sidebar ring 运行中");
+    expect(row.props.role).toBe("group");
+    row.props.onPress();
+    expect(onReveal).toHaveBeenCalledWith("sample-child-1", "sample-running");
+    expect(nestedButtons(root)).toEqual([]);
+    await act(async () => renderer.unmount());
+  });
+
+  it("keeps the desktop card size and hover shadow while pressed", async () => {
+    const renderer = await render(React.createElement(TaskCardView, props("sample-running")));
+    const card = () => renderer.root.find((node) => typeof node.type === "string" && node.props.testID === "task-card-sample-running");
+    await act(async () => hovers.get("task-card-sample-running")!.enter());
+    const shadow = card().props.style.boxShadow;
+    expect(shadow).toBe(taskTokens(THEME).card.shadowHover);
+    await act(async () => card().props.onPressIn());
+    expect(card().props.style.transform).toBeUndefined();
+    expect(card().props.style.boxShadow).toBe(shadow);
+    await act(async () => renderer.unmount());
+  });
+
+  it.each([false, true])("has no nested buttons in the details cards (touch=%s)", async (touch) => {
+    const card = sampleCards(NOW).find((candidate) => candidate.id === "sample-running")!;
+    const renderer = await render(
+      React.createElement(TaskDetailCards, {
+        card,
+        theme: THEME,
+        now: NOW,
+        language: "zh",
+        strings: BOARD_STRINGS.zh.sidebar,
+        touch,
+        onOpen: () => {},
+        onClose: () => {},
+        onJump: () => {},
+        stop: { phase: "idle", onPress: () => {} },
+      }),
+    );
+    const directory = renderer.root.find((node) => typeof node.type === "string" && node.props.testID === "detail-cwd");
+    await act(async () => hovers.get("detail-cwd")!.enter());
+    expect(directory.findAll((node) => typeof node.type === "string" && node.props.accessibilityLabel === "打开文件夹")).toHaveLength(touch ? 0 : 1);
+    expect(nestedButtons(renderer.root)).toEqual([]);
+    await act(async () => renderer.unmount());
+  });
+
+  it("keeps directory actions while the pointer crosses the row and enters either button", async () => {
+    const renderer = await render(React.createElement(TaskDetailCards, {
+      card: sampleCards(NOW).find((card) => card.id === "sample-running")!,
+      theme: THEME, now: NOW, language: "zh", strings: BOARD_STRINGS.zh.sidebar,
+    }));
+    const row = renderer.root.find((node) => typeof node.type === "string" && node.props.testID === "detail-cwd");
+    const actions = () => row.findAll((node) => typeof node.type === "string" && node.props.accessibilityRole === "button");
+    const labels = () => actions().map((node) => node.props.accessibilityLabel);
+    expect(labels()).toEqual([]);
+    // The DOM listener belongs to the full row, including its padding and the gap before the actions.
+    expect(hovers.has("detail-cwd")).toBe(true);
+    expect(row.props.onHoverIn).toBeUndefined();
+    expect(row.props.onHoverOut).toBeUndefined();
+    await act(async () => hovers.get("detail-cwd")!.enter());
+    expect(labels()).toEqual(["打开文件夹", "复制路径"]);
+    const background = row.props.style.backgroundColor;
+    expect(background).not.toBe("transparent");
+    for (const label of ["打开文件夹", "复制路径"]) {
+      await act(async () => {
+        actions().find((node) => node.props.accessibilityLabel === label)!.props.onHoverIn();
+        // RNW tries to end the ancestor's synthetic hover on entering an inner Pressable.
+        row.props.onHoverOut?.();
+      });
+      expect(labels()).toEqual(["打开文件夹", "复制路径"]);
+      expect(row.props.style.backgroundColor).toBe(background);
+    }
+    // Only leaving the row hides its actions and hover fill.
+    await act(async () => hovers.get("detail-cwd")!.leave());
+    expect(labels()).toEqual([]);
+    expect(row.props.style.backgroundColor).toBe("transparent");
+    await act(async () => renderer.unmount());
+    expect(hovers.has("detail-cwd")).toBe(false);
+  });
+
+  it("hides folder opening in a touch browser even in a wide desktop layout", async () => {
+    folder.touch = true;
+    const card = sampleCards(NOW).find((card) => card.id === "sample-running")!;
+    const renderer = await render(React.createElement(TaskDetailCards, {
+      card, theme: THEME, now: NOW, language: "zh", strings: BOARD_STRINGS.zh.sidebar,
+    }));
+    try {
+      const row = renderer.root.find((node) => typeof node.type === "string" && node.props.testID === "detail-cwd");
+      await act(async () => hovers.get("detail-cwd")!.enter());
+      expect(row.findAll((node) => typeof node.type === "string" && node.props.accessibilityLabel === "打开文件夹")).toHaveLength(0);
+      const before = copies.length;
+      await act(async () => row.props.onPress());
+      expect(copies.slice(before)).toEqual([card.location.cwd]);
+    } finally {
+      folder.touch = false;
+      await act(async () => renderer.unmount());
+    }
+  });
+
+  it.each(["zh", "en"] as const)("opens the desktop folder and reports failures in %s", async (language) => {
+    const card = sampleCards(NOW).find((card) => card.id === "sample-running")!;
+    const renderer = await render(React.createElement(TaskDetailCards, {
+      card, theme: THEME, now: NOW, language, strings: BOARD_STRINGS[language].sidebar,
+    }));
+    folder.reveal.mockReset();
+    folder.error.mockClear();
+    folder.reveal.mockResolvedValueOnce({ revealed: card.location.cwd, error: null });
+    await act(async () => hovers.get("detail-cwd")!.enter());
+    const label = language === "zh" ? "打开文件夹" : "Open folder";
+    const button = renderer.root.find((node) => typeof node.type === "string" && node.props.accessibilityLabel === label);
+    const stopPropagation = vi.fn();
+    const before = copies.length;
+    await act(async () => button.props.onPress({ stopPropagation }));
+    expect(stopPropagation).toHaveBeenCalledOnce();
+    expect(folder.reveal).toHaveBeenCalledExactlyOnceWith({ cwd: card.location.cwd, path: card.location.cwd });
+    expect(copies.length).toBe(before);
+    expect(folder.error).not.toHaveBeenCalled();
+    folder.reveal.mockResolvedValueOnce({ revealed: null, error: "Directory missing" });
+    await act(async () => button.props.onPress({ stopPropagation }));
+    expect(folder.error).toHaveBeenLastCalledWith(language === "zh" ? "打开文件夹失败：Directory missing" : "Could not open folder: Directory missing");
+    folder.reveal.mockRejectedValueOnce(new Error("Host disconnected"));
+    await act(async () => button.props.onPress({ stopPropagation }));
+    expect(folder.error).toHaveBeenLastCalledWith(language === "zh" ? "打开文件夹失败：Host disconnected" : "Could not open folder: Host disconnected");
+    await act(async () => renderer.unmount());
+  });
+
+  it("reveals an idle parent's children-only stop on hover and preserves its scope on confirmation", async () => {
+    const card = { ...sampleCards(NOW).find((candidate) => candidate.id === "sample-running")!, stoppable: false, waitingOnSubtasks: true };
+    const onStop = vi.fn();
+    const element = (stopPhase: TaskCardViewProps["stopPhase"]) => React.createElement(TaskCardView, props(card.id, { card, onStop, stopPhase }));
+    const renderer = await render(element("idle"));
+    const controls = () => renderer.root.findAll((node) => typeof node.type === "string" && node.props.testID === "task-card-stop");
+    expect(controls()).toHaveLength(0);
+    await act(async () => hovers.get(`task-card-${card.id}`)!.enter());
+    expect(controls()).toHaveLength(1);
+    const stop = renderer.root.find((node) => typeof node.type === "string" && node.props.accessibilityLabel === "停止子任务");
+    await act(async () => stop.props.onPress());
+    expect(onStop).toHaveBeenLastCalledWith(card, { withChildren: true });
+    await act(async () => renderer.update(element("confirming")));
+    const confirm = renderer.root.find((node) => typeof node.type === "string" && node.props.accessibilityLabel === "确认停止全部");
+    await act(async () => confirm.props.onPress());
+    expect(onStop).toHaveBeenLastCalledWith(card, { withChildren: true });
+    expect(renderer.root.findAll((node) => typeof node.type === "string" && node.props.testID === "task-card-stop-divider")).toHaveLength(0);
+    await act(async () => renderer.unmount());
+  });
+
+  it("keeps a self-only confirmation's scope and label when the parent becomes idle", async () => {
+    const card = sampleCards(NOW).find((candidate) => candidate.id === "sample-running")!;
+    const onStop = vi.fn();
+    const element = (current: TaskCard, stopPhase: TaskCardViewProps["stopPhase"]) => React.createElement(TaskCardView, props(card.id, { card: current, onStop, stopPhase }));
+    const renderer = await render(element(card, "idle"));
+    await act(async () => hovers.get(`task-card-${card.id}`)!.enter());
+    const stop = renderer.root.find((node) => typeof node.type === "string" && node.props.accessibilityLabel === "停止");
+    await act(async () => stop.props.onPress());
+    expect(onStop).toHaveBeenLastCalledWith(card, { withChildren: false });
+    const idle = { ...card, stoppable: false, waitingOnSubtasks: true };
+    await act(async () => renderer.update(element(idle, "confirming")));
+    const confirm = renderer.root.find((node) => typeof node.type === "string" && node.props.accessibilityLabel === "确认停止");
+    await act(async () => confirm.props.onPress());
+    expect(onStop).toHaveBeenLastCalledWith(idle, { withChildren: false });
+    await act(async () => renderer.unmount());
+  });
+
+  it("keeps Stop while the pointer moves from the card onto it, and cancels on leaving the card", async () => {
+    const onStop = vi.fn();
+    const onCancelStop = vi.fn();
+    const card = sampleCards(NOW).find((candidate) => candidate.id === "sample-child-1")!;
+    const element = (overrides: Partial<TaskCardViewProps> = {}) =>
+      React.createElement(TaskCardView, props(card.id, { onStop, onCancelStop, ...overrides }));
+    const renderer = await render(element());
+    const root = renderer.root;
+    const stopButton = () =>
+      root.findAll((node) => typeof node.type === "string" && node.props.accessibilityLabel === "停止")[0];
+    const surface = root.find((node) => typeof node.type === "string" && node.props.testID === `task-card-${card.id}`);
+    expect(stopButton()).toBeUndefined();
+
+    // Pointer onto the card.
+    await act(async () => hovers.get(`task-card-${card.id}`)!.enter());
+    expect(stopButton()).toBeDefined();
+
+    // Pointer onto the stop button: RNW's Pressable would end the card's own hover
+    // here (hover:lock); the card does not listen to it on web, and the DOM hover
+    // still contains the button, so nothing leaves.
+    expect(surface.props.onHoverOut).toBeUndefined();
+    await act(async () => {
+      stopButton()!.props.onHoverIn?.();
+      surface.props.onHoverOut?.();
+    });
+    expect(stopButton()).toBeDefined();
+    await act(async () => stopButton()!.props.onPress());
+    expect(onStop).toHaveBeenCalledWith(card, { withChildren: false });
+
+    // Armed: the second press within the window stops.
+    await act(async () => renderer.update(element({ stopPhase: "confirming" })));
+    const confirm = root.find((node) => typeof node.type === "string" && node.props.accessibilityLabel === "确认停止");
+    await act(async () => confirm.props.onPress());
+    expect(onStop).toHaveBeenCalledTimes(2);
+    expect(onCancelStop).not.toHaveBeenCalled();
+
+    // Leaving the card cancels the confirmation and hides Stop.
+    await act(async () => hovers.get(`task-card-${card.id}`)!.leave());
+    expect(onCancelStop).toHaveBeenCalledWith(card.id);
+    await act(async () => renderer.update(element({ stopPhase: "idle" })));
+    // It fades out first, out of reach, then unmounts.
+    const overlay = () => root.findAll((node) => typeof node.type === "string" && node.props.testID === "task-card-stop-overlay")[0];
+    expect(overlay()?.props.pointerEvents).toBe("none");
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 200)));
+    expect(stopButton()).toBeUndefined();
+    await act(async () => renderer.unmount());
+  });
+
+  it("floats Stop, Open parent on a subtask, then Open in the corner on hover, and Open alone on a card with neither", async () => {
+    const onOpen = vi.fn();
+    const running = await render(React.createElement(TaskCardView, props("sample-child-1", { onOpen, onStop: () => {} })));
+    const label = (root: ReactTestInstance, text: string) =>
+      root.findAll((node) => typeof node.type === "string" && node.props.accessibilityLabel === text)[0];
+    expect(label(running.root, "打开")).toBeUndefined();
+    await act(async () => hovers.get("task-card-sample-child-1")!.enter());
+    const overlay = running.root.find((node) => typeof node.type === "string" && node.props.testID === "task-card-stop-overlay");
+    const order = overlay.findAll((node) => typeof node.type === "string" && node.props.accessibilityRole === "button").map((node) => node.props.accessibilityLabel);
+    expect(order).toEqual(["停止", "打开父任务", "打开"]);
+    await act(async () => label(running.root, "打开")!.props.onPress());
+    expect(onOpen).toHaveBeenCalledWith("sample-child-1");
+    await act(async () => label(running.root, "打开父任务")!.props.onPress());
+    expect(onOpen).toHaveBeenLastCalledWith("sample-running");
+    await act(async () => running.unmount());
+
+    const done = await render(React.createElement(TaskCardView, props("sample-done", { onOpen })));
+    await act(async () => hovers.get("task-card-sample-done")!.enter());
+    const alone = done.root.find((node) => typeof node.type === "string" && node.props.testID === "task-card-open-overlay");
+    expect(alone.findAll((node) => typeof node.type === "string" && node.props.accessibilityRole === "button").map((node) => node.props.accessibilityLabel)).toEqual(["打开"]);
+    await act(async () => done.unmount());
+  });
+
+  // Every request kind takes a tool permission's section: a real ExitPlanMode,
+  // a mode change and an unknown request too, each divider saying what it waits for.
+  it.each([
+    { kind: "plan", divider: "待确认", answers: ["拒绝", "实施"], controls: ["停止", "打开"] },
+    { kind: "plan-resume", divider: "待确认", answers: ["拒绝", "实施", "Implement with Bypass"], controls: ["停止", "打开"] },
+    { kind: "mode", divider: "待授权", answers: ["允许", "拒绝"], controls: ["停止", "打开"] },
+    // "去回答" opens the tab itself, so no Open beside Stop.
+    { kind: "other", divider: "待回答", answers: ["去回答"], controls: ["停止"] },
+  ] as const)("lays a $kind request out as a tool permission's section on the desktop", async ({ kind, divider, answers: labels, controls: controlLabels }) => {
+    const input = sampleCards(NOW).find((item) => item.id === "sample-input")!;
+    const card: TaskCard = kind === "plan" || kind === "plan-resume" ? asExitPlan(input, { resume: kind === "plan-resume" }) : { ...input, permission: { ...input.permission!, kind, actions: [] } };
+    const onOpen = vi.fn();
+    const onStop = vi.fn();
+    const onPermission = vi.fn();
+    const buttons = permissionButtons(card.permission!, "zh", true);
+    const renderer = await render(React.createElement(TaskCardView, props(card.id, { card, onOpen, onStop, onPermission, permissionButtons: buttons })));
+    const host = (id: string) => renderer.root.findAll((node) => typeof node.type === "string" && node.props.testID === id);
+    const nodes = renderer.root.findAll((node) => typeof node.type === "string");
+    const controls = host("task-card-control-row")[0]!;
+    const request = host("task-card-permission")[0]!;
+    expect(nodes.indexOf(controls)).toBeLessThan(nodes.indexOf(request));
+    expect(controls.findAll((node) => typeof node.type === "string" && node.props.accessibilityRole === "button").map((node) => node.props.accessibilityLabel)).toEqual(controlLabels);
+    expect(texts(request.find((node) => typeof node.type === "string" && node.props.testID === "task-card-question-divider"))).toEqual([divider, "·", "4m"]);
+    // A plan reads as one, by its title, not as the tool that asks for it; no icon beside it.
+    const title = request.find((node) => typeof node.type === "string" && node.props.numberOfLines === 2);
+    if (kind === "plan" || kind === "plan-resume") expect(texts(title).sort()).toEqual([" · ", "Ship the request layout", "计划"]);
+    expect(title.parent!.findAll((node) => (node.type as unknown) === "Icon")).toHaveLength(0);
+    const answers = request.find((node) => typeof node.type === "string" && node.props.testID === "task-card-answer-actions");
+    expect(answers.findAll((node) => typeof node.type === "string" && node.props.accessibilityRole === "button").map((node) => node.props.accessibilityLabel)).toEqual(labels);
+    // Its wait sits on the divider, not after the answers.
+    expect(host("task-card-answer-row")[0]!.findAll((node) => node.props.testID === "task-card-footer")).toHaveLength(0);
+    await act(async () => hovers.get(`task-card-${card.id}`)!.enter());
+    expect(renderer.root.findAll((node) => typeof node.type === "string" && /^task-card-.*-overlay$/.test(String(node.props.testID)))).toEqual([]);
+    for (const [index, label] of labels.entries()) {
+      await act(async () => answers.find((node) => typeof node.type === "string" && node.props.accessibilityLabel === label).props.onPress());
+      expect(onPermission).toHaveBeenLastCalledWith(card, buttons[index]);
+    }
+    expect(onOpen).not.toHaveBeenCalled();
+    await act(async () => controls.find((node) => typeof node.type === "string" && node.props.accessibilityLabel === "停止").props.onPress());
+    expect(onStop).toHaveBeenCalledWith(card, { withChildren: false });
+    await act(async () => renderer.unmount());
+  });
+
+  it("lays a tool permission out as a question: Stop and Open above the divider, Allow and Deny below it", async () => {
+    const card = sampleCards(NOW).find((item) => item.id === "sample-input")!;
+    const onOpen = vi.fn();
+    const onStop = vi.fn();
+    const onPermission = vi.fn();
+    const buttons = permissionButtons(card.permission!, "zh", true);
+    const renderer = await render(React.createElement(TaskCardView, props(card.id, { onOpen, onStop, onPermission, permissionButtons: buttons })));
+    const host = (id: string) => renderer.root.findAll((node) => typeof node.type === "string" && node.props.testID === id);
+    const nodes = renderer.root.findAll((node) => typeof node.type === "string");
+    const controls = host("task-card-control-row")[0]!;
+    const request = host("task-card-permission")[0]!;
+    // Shown without hover, before the request; nothing floats over the footer.
+    expect(nodes.indexOf(controls)).toBeLessThan(nodes.indexOf(request));
+    expect(controls.findAll((node) => typeof node.type === "string" && node.props.accessibilityRole === "button").map((node) => node.props.accessibilityLabel)).toEqual(["停止", "打开"]);
+    const divider = request.find((node) => typeof node.type === "string" && node.props.testID === "task-card-question-divider");
+    expect(texts(divider)).toEqual(["待授权", "·", "4m"]);
+    const answers = request.find((node) => typeof node.type === "string" && node.props.testID === "task-card-answer-actions");
+    expect(answers.findAll((node) => typeof node.type === "string" && node.props.accessibilityRole === "button").map((node) => node.props.accessibilityLabel)).toEqual(["允许", "拒绝"]);
+    await act(async () => hovers.get(`task-card-${card.id}`)!.enter());
+    expect(host("task-card-open-overlay")).toEqual([]);
+    expect(host("task-card-stop-overlay")).toEqual([]);
+    expect(host("task-card-open-tab")).toHaveLength(1);
+    // Allow answers in place; Stop and Open stay the task's.
+    await act(async () => answers.find((node) => typeof node.type === "string" && node.props.accessibilityLabel === "允许").props.onPress());
+    expect(onPermission).toHaveBeenCalledWith(card, buttons[0]);
+    expect(onOpen).not.toHaveBeenCalled();
+    await act(async () => controls.find((node) => typeof node.type === "string" && node.props.accessibilityLabel === "停止").props.onPress());
+    expect(onStop).toHaveBeenCalledWith(card, { withChildren: false });
+    await act(async () => renderer.unmount());
+  });
+
+  it("floats Archive before Open on a done task's hover, spinning while it runs", async () => {
+    const onOpen = vi.fn();
+    const onArchive = vi.fn();
+    const renderer = await render(React.createElement(TaskCardView, props("sample-done", { onOpen, onArchive })));
+    await act(async () => hovers.get("task-card-sample-done")!.enter());
+    const overlay = renderer.root.find((node) => typeof node.type === "string" && node.props.testID === "task-card-archive-overlay");
+    const buttons = overlay.findAll((node) => typeof node.type === "string" && node.props.accessibilityRole === "button");
+    expect(buttons.map((node) => node.props.accessibilityLabel)).toEqual(["归档", "打开"]);
+    await act(async () => buttons[0]!.props.onPress());
+    expect(onArchive).toHaveBeenCalledWith("sample-done");
+    expect(onOpen).not.toHaveBeenCalled();
+
+    await act(async () => renderer.update(React.createElement(TaskCardView, props("sample-done", { onOpen, onArchive, archivePending: true }))));
+    const busy = renderer.root.find((node) => typeof node.type === "string" && node.props.testID === "task-card-archive");
+    expect(busy.props.disabled).toBe(true);
+    await act(async () => renderer.unmount());
+
+    // Only the done lane: a running task has no Archive.
+    const running = await render(React.createElement(TaskCardView, props("sample-child-1", { onOpen, onArchive })));
+    await act(async () => hovers.get("task-card-sample-child-1")!.enter());
+    expect(running.root.findAll((node) => node.props.testID === "task-card-archive")).toHaveLength(0);
+
+    const onUnread = vi.fn();
+    const marked = await render(React.createElement(TaskCardView, props("sample-done", { onOpen, onArchive, onUnread })));
+    await act(async () => hovers.get("task-card-sample-done")!.enter());
+    const unreadOverlay = marked.root.find((node) => typeof node.type === "string" && node.props.testID === "task-card-archive-overlay");
+    const unreadButtons = unreadOverlay.findAll((node) => typeof node.type === "string" && node.props.accessibilityRole === "button");
+    expect(unreadButtons.map((node) => node.props.accessibilityLabel)).toEqual(["保持未读", "归档", "打开"]);
+    await act(async () => unreadButtons[0]!.props.onPress());
+    expect(onUnread).toHaveBeenCalledWith(expect.objectContaining({ id: "sample-done" }));
+    await act(async () => marked.unmount());
+    await act(async () => running.unmount());
+  });
+
+  it("floats Unarchive in Open's place on an archived task's hover", async () => {
+    const onOpen = vi.fn();
+    const onUnarchive = vi.fn();
+    const card: TaskCard = { ...sampleCards(NOW).find((candidate) => candidate.id === "sample-done")!, lane: "archived", status: "archived", archived: "agent" };
+    const renderer = await render(React.createElement(TaskCardView, { ...props(card.id, { onOpen, onUnarchive }), card }));
+    await act(async () => hovers.get(`task-card-${card.id}`)!.enter());
+    const overlay = renderer.root.find((node) => typeof node.type === "string" && node.props.testID === "task-card-unarchive-overlay");
+    const buttons = overlay.findAll((node) => typeof node.type === "string" && node.props.accessibilityRole === "button");
+    expect(buttons.map((node) => node.props.accessibilityLabel)).toEqual(["取消归档"]);
+    await act(async () => buttons[0]!.props.onPress());
+    expect(onUnarchive).toHaveBeenCalledWith(card.id);
+    expect(onOpen).not.toHaveBeenCalled();
+    await act(async () => renderer.unmount());
+  });
+
+  it("floats Mark read over the row's end on hover, keeps it while pending, and fades it out", async () => {
+    const onRead = vi.fn();
+    const card: TaskCard = { ...sampleCards(NOW).find((candidate) => candidate.id === "sample-unread")!, readable: true };
+    const element = (overrides: Partial<TaskCardViewProps> = {}) =>
+      React.createElement(TaskCardView, { ...props(card.id, { onRead, ...overrides }), card });
+    const renderer = await render(element());
+    const root = renderer.root;
+    const readButton = () =>
+      root.findAll((node) => typeof node.type === "string" && node.props.accessibilityLabel === "标为已读")[0];
+    const overlay = () => root.findAll((node) => typeof node.type === "string" && node.props.testID === "task-card-read-overlay")[0];
+    expect(readButton()).toBeUndefined();
+    expect(nestedButtons(root)).toEqual([]);
+
+    await act(async () => hovers.get(`task-card-${card.id}`)!.enter());
+    // Stop's place: the footer's right end, over the context ring.
+    expect(Object.assign({}, ...[overlay()?.props.style].flat())).toMatchObject({ position: "absolute", right: 0 });
+    const footer = root.find((node) => typeof node.type === "string" && node.props.testID === "task-card-footer");
+    expect(footer.findAll((node) => node === overlay())).toHaveLength(1);
+    await act(async () => readButton()!.props.onPress());
+    expect(onRead).toHaveBeenCalledWith(card);
+    expect(nestedButtons(root)).toEqual([]);
+
+    // Pending, it stays after the pointer leaves, until the card moves on.
+    await act(async () => renderer.update(element({ readPending: true })));
+    await act(async () => hovers.get(`task-card-${card.id}`)!.leave());
+    expect(readButton()?.props.disabled).toBe(true);
+
+    await act(async () => renderer.update(element({ readPending: false })));
+    expect(overlay()?.props.pointerEvents).toBe("none");
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 200)));
+    expect(readButton()).toBeUndefined();
+    await act(async () => renderer.unmount());
+  });
+
+  it("keeps a parent's stop menu and a subtask row's jump button while they are hovered", async () => {
+    const onOpen = vi.fn();
+    const renderer = await render(React.createElement(TaskCardView, props("sample-running", { onOpen })));
+    const root = renderer.root;
+    await act(async () => hovers.get("task-card-sample-running")!.enter());
+    await act(async () =>
+      root.find((node) => typeof node.type === "string" && node.props.accessibilityLabel === "停止选项").props.onPress(),
+    );
+    expect(texts(root)).toContain("连同子任务一起停止");
+
+    await act(async () =>
+      root.find((node) => typeof node.type === "string" && node.props.accessibilityState?.expanded === false).props.onPress(),
+    );
+    const jump = () =>
+      root
+        .find((node) => typeof node.type === "string" && node.props.accessibilityLabel === "Measure the sidebar ring 运行中")
+        .find((node) => typeof node.type === "string" && node.props.accessibilityLabel === "在工作区中打开");
+    expect(jump().props.disabled).toBe(true);
+    const row = () => root.find((node) => typeof node.type === "string" && node.props.testID === "subtask-sample-child-1");
+    const backdrop = row().props.style.backgroundColor;
+    await act(async () => hovers.get("subtask-sample-child-1")!.enter());
+    expect(row().props.style.backgroundColor).toBe(hoverFill(backdrop, taskTokens(THEME).foreground, true, false));
+    await act(async () => row().props.onPressIn());
+    expect(row().props.style.backgroundColor).toBe(hoverFill(backdrop, taskTokens(THEME).foreground, true, true));
+    await act(async () => row().props.onPressOut());
+    expect(jump().props.disabled).toBe(false);
+    expect(jump().props.style.opacity).toBe(1);
+    jump().props.onPress();
+    expect(onOpen).toHaveBeenCalledWith("sample-child-1");
+    // The menu is still open: the card never lost its hover.
+    expect(texts(root)).toContain("连同子任务一起停止");
+    await act(async () => renderer.unmount());
+  });
+
+  it("raises the rows that hold overlays above the rows after them", async () => {
+    const flat = (style: unknown) => Object.assign({}, ...[style].flat(Infinity).filter(Boolean)) as Record<string, unknown>;
+    const host = (root: ReactTestInstance, testID: string) =>
+      root.find((node) => typeof node.type === "string" && node.props.testID === testID);
+    /** Host children of a host element, looking through rn-mock's function wrappers. */
+    const hostChildren = (node: ReactTestInstance): ReactTestInstance[] =>
+      node.children.flatMap((child) =>
+        typeof child === "string" ? [] : typeof child.type === "string" ? [child] : hostChildren(child),
+      );
+    const zOf = (node: ReactTestInstance) => Number(flat(node.props.style).zIndex ?? 0);
+
+    // Desktop: the stop menu lives in the footer, above the rows after it; the
+    // meta row holds no overlay until the context ring's details show.
+    const renderer = await render(React.createElement(TaskCardView, props("sample-running")));
+    const root = renderer.root;
+    await act(async () => hovers.get("task-card-sample-running")!.enter());
+    await act(async () =>
+      root.find((node) => typeof node.type === "string" && node.props.accessibilityLabel === "停止选项").props.onPress(),
+    );
+    const header = host(root, "task-card-meta");
+    const footer = host(root, "task-card-footer");
+    expect(OVERLAY_ROW_Z).toBeGreaterThan(0);
+    expect(zOf(header)).toBe(0);
+    expect(zOf(footer)).toBe(OVERLAY_ROW_Z);
+    const rows = hostChildren(host(root, "task-card-sample-running"));
+    for (const row of rows.slice(rows.indexOf(footer) + 1)) expect(zOf(row)).toBeLessThan(OVERLAY_ROW_Z);
+    const items = footer.findAll((node) => typeof node.type === "string" && node.props.accessibilityRole === "menuitem");
+    expect(items).toHaveLength(2);
+    await act(async () => renderer.unmount());
+
+    // Phone: the menu opens upwards from the action bar, the card's last and raised row.
+    const phone = await render(React.createElement(TaskCardView, props("sample-running", { compact: true })));
+    const actions = host(phone.root, "task-card-actions");
+    expect(zOf(actions)).toBe(OVERLAY_ROW_Z);
+    const phoneRows = hostChildren(host(phone.root, "task-card-sample-running"));
+    expect(phoneRows[phoneRows.length - 1]).toBe(actions);
+    await act(async () =>
+      actions.find((node) => typeof node.type === "string" && node.props.accessibilityLabel === "停止选项").props.onPress(),
+    );
+    expect(actions.findAll((node) => typeof node.type === "string" && node.props.accessibilityRole === "menuitem")).toHaveLength(2);
+    await act(async () => phone.unmount());
+  });
+});
+
+describe("A scheduled task's ticket card on web", () => {
+  const flat = (style: unknown) => Object.assign({}, ...[style].flat(Infinity).filter(Boolean)) as Record<string, unknown>;
+  const host = (root: ReactTestInstance, testID: string) => root.find((node) => typeof node.type === "string" && node.props.testID === testID);
+
+  it("draws its rule with CSS backgrounds, its focus as the card's outline and its hover on every section", async () => {
+    const tokens = taskTokens(THEME);
+    const card = { ...sampleCards(NOW).find((item) => item.id === "sample-running")!, scheduled: true };
+    const renderer = await render(React.createElement(TaskCardView, props("sample-running", { card, focused: true })));
+    const root = renderer.root;
+    const style = flat(host(root, "task-card-sample-running").props.style);
+    expect(style).toMatchObject({ backgroundColor: "transparent", borderColor: "transparent", boxShadow: "none", outlineStyle: "solid", outlineOffset: 2 });
+    const rule = flat(host(root, "task-card-ticket-rule").props.style);
+    // Chrome rounds a box under 1 px up to a whole pixel, so the half-pixel line is a 1 px box scaled down from its top.
+    expect(rule).toMatchObject({ backgroundSize: "5px 100%", backgroundRepeat: "repeat-x", height: 1, transform: [{ scaleY: 0.5 }], transformOrigin: "top" });
+    expect(String(rule.backgroundImage)).toBe(`linear-gradient(to right, ${tokens.card.buttonBorder} 0px, ${tokens.card.buttonBorder} 3px, transparent 3px, transparent 5px)`);
+    expect(rule.experimental_backgroundImage).toBeUndefined();
+    // The outline goes round the card, so the sections keep only the card's own shadow.
+    for (const part of ["task-card-ticket-head-surface", "task-card-ticket-tail-surface"]) expect(flat(host(root, part).props.style).boxShadow).toBe(tokens.card.shadow);
+    expect(flat(host(root, "task-card-ticket-arc-left").props.style).boxShadow).toBeUndefined();
+    for (const part of ["task-card-ticket-head-surface", "task-card-ticket-tail-surface", "task-card-ticket-band-fill", "task-card-ticket-fill-left", "task-card-ticket-arc-right"]) {
+      expect(flat(host(root, part).props.style).transitionProperty).toContain("box-shadow");
+    }
+    expect(host(root, "task-card-ticket-band").props["aria-hidden"]).toBe(true);
+    await act(async () => hovers.get("task-card-sample-running")!.enter());
+    for (const part of ["task-card-ticket-head-surface", "task-card-ticket-tail-surface"]) expect(flat(host(root, part).props.style).boxShadow).toBe(tokens.card.shadowHover);
+    expect(flat(host(root, "task-card-ticket-arc-right").props.style).boxShadow).toBeUndefined();
+    // The footer's stop menu still rises over the rows after it, inside the tail.
+    const footer = host(root, "task-card-footer");
+    expect(flat(footer.props.style).zIndex).toBe(OVERLAY_ROW_Z);
+    expect(host(root, "task-card-ticket-lower").findAll((node) => node === footer)).toHaveLength(1);
+    expect(flat(host(root, "task-card-ticket-upper").props.style).zIndex).toBeUndefined();
+    expect(nestedButtons(root)).toEqual([]);
+    await act(async () => renderer.unmount());
+  });
+});
+
+describe("TaskCardView right-click menu", () => {
+  it.each(["running", "done", "archived", "child"])("gives every available %s menu row a unique working shortcut in its panel", (state) => {
+    const actions: CardMenuActions = {
+      copy: vi.fn(), children: state === "running" ? 2 : 0,
+      open: state !== "archived" ? vi.fn() : undefined,
+      rename: vi.fn(), autoTitle: vi.fn(), autoTitlePending: true,
+      stop: state === "running" ? vi.fn() : undefined,
+      read: state === "done" ? vi.fn() : undefined,
+      archive: state === "done" ? vi.fn() : undefined,
+      unarchive: state === "archived" ? vi.fn() : undefined,
+      openParent: state === "child" ? vi.fn() : undefined,
+      revealParent: state === "child" ? vi.fn() : undefined,
+      filters: { state: { agent: false, project: true, workspace: false }, select: vi.fn() },
+    };
+    const sections = cardMenuSections(props("sample-running").card, cardStrings("en"), actions);
+    const verify = (sections: MenuSection[]) => {
+      const rows = sections.flatMap((section) => section.items);
+      const shortcuts = rows.map((row) => row.shortcut);
+      expect(shortcuts.every(Boolean)).toBe(true);
+      expect(new Set(shortcuts).size).toBe(shortcuts.length);
+      const enabled = selectableItems(sections);
+      for (const row of rows) {
+        const result = menuKeyReducer(MENU_FOCUS, row.shortcut!.toLowerCase() === "enter" ? "Enter" : row.shortcut!.toLowerCase(), enabled, null);
+        expect(result.handled).toBe(!row.disabled);
+        if (row.disabled) continue;
+        if (row.submenu) {
+          expect(result.focus).toMatchObject({ level: 1, open: enabled.indexOf(row) });
+          verify(row.submenu);
+          continue;
+        }
+        expect(result.effect).toEqual({ type: "select", level: 0, index: enabled.indexOf(row) });
+        row.onSelect!();
+      }
+    };
+    verify(sections);
+    expect(actions.copy).toHaveBeenCalledWith("sample-running", "Copy session ID");
+    expect(actions.rename).toHaveBeenCalledOnce();
+    expect(actions.autoTitle).not.toHaveBeenCalled();
+    if (actions.stop) {
+      expect(actions.stop).toHaveBeenCalledWith(false);
+      expect(actions.stop).toHaveBeenCalledWith(true);
+    }
+  });
+
+  const rows = (root: ReactTestInstance) =>
+    root.findAll((node) => typeof node.type === "string" && node.props.accessibilityRole === "menuitem").map((node) => texts(node)[0]);
+  const choose = (root: ReactTestInstance, label: string) =>
+    act(async () => {
+      root.find((node) => typeof node.type === "string" && node.props.accessibilityRole === "menuitem" && texts(node)[0] === label).props.onPress();
+      await Promise.resolve();
+    });
+
+  it("opens the actions on a compact long press while desktop keeps right click", async () => {
+    const renderer = await render(React.createElement(TaskCardView, props("sample-running", { compact: true })));
+    const surface = () => renderer.root.find((node) => typeof node.type === "string" && node.props.testID === "task-card-sample-running");
+    await act(async () => surface().props.onLongPress());
+    expect(rows(renderer.root)).toContain("复制会话 ID");
+    expect(renderer.root.findAll((node) => (node.type as unknown) === "Modal")).toHaveLength(1);
+    await act(async () => renderer.unmount());
+    const desktop = await render(React.createElement(TaskCardView, props("sample-running")));
+    expect(desktop.root.find((node) => typeof node.type === "string" && node.props.testID === "task-card-sample-running").props.onLongPress).toBeUndefined();
+    await act(async () => desktop.unmount());
+  });
+
+  it("opens at the pointer with Open, the copies, then what the card can do", async () => {
+    const onStop = vi.fn();
+    const renderer = await render(React.createElement(TaskCardView, props("sample-running", { onStop })));
+    const root = renderer.root;
+    expect(root.findAll((node) => node.props.testID === "task-card-menu")).toHaveLength(0);
+    await act(async () => contextMenus.get("task-card-sample-running")!({ x: 40, y: 60 }, null));
+    expect(rows(root)).toEqual(["打开", "修改标题", "复制会话 ID", "复制标题", "复制工作区名称", "复制项目名称", "停止"]);
+
+    copies.length = 0;
+    await choose(root, "复制会话 ID");
+    expect(copies).toEqual(["sample-running"]);
+    expect(root.findAll((node) => node.props.testID === "task-card-menu")).toHaveLength(0);
+
+    // A parent's Stop opens "only this / with subtasks"; either stops without the confirm step.
+    await act(async () => contextMenus.get("task-card-sample-running")!({ x: 40, y: 60 }, null));
+    await choose(root, "停止");
+    await choose(root, "连同子任务一起停止");
+    expect(onStop).toHaveBeenCalledWith(expect.objectContaining({ id: "sample-running" }), { withChildren: true, dialog: true });
+    await act(async () => renderer.unmount());
+  });
+
+  it("draws Stop, and its subtask choices, in the danger colour", async () => {
+    const renderer = await render(React.createElement(TaskCardView, props("sample-running")));
+    const root = renderer.root;
+    const danger = taskTokens(THEME).danger;
+    await act(async () => contextMenus.get("task-card-sample-running")!({ x: 40, y: 60 }, null));
+    const row = (label: string) =>
+      root.find((node) => typeof node.type === "string" && node.props.accessibilityRole === "menuitem" && texts(node)[0] === label);
+    const colors = (node: ReactTestInstance) => ({
+      text: node.findAll((child) => (child.type as unknown) === "Text")[0]!.props.style.color,
+      icon: node.findAll((child) => (child.type as unknown) === "Icon")[0]?.props.color,
+    });
+    expect(colors(row("停止"))).toEqual({ text: danger, icon: danger });
+    expect(colors(row("复制标题")).text).not.toBe(danger);
+    await choose(root, "停止");
+    expect(colors(row("仅停止此任务"))).toEqual({ text: danger, icon: danger });
+    expect(colors(row("连同子任务一起停止"))).toEqual({ text: danger, icon: danger });
+    await act(async () => renderer.unmount());
+  });
+
+  it("offers Mark read on a card to review and Unarchive on an archived task", async () => {
+    const onRead = vi.fn();
+    const onUnarchive = vi.fn();
+    const card = { ...sampleCards(NOW).find((item) => item.id === "sample-unread")!, readable: true };
+    const unread = await render(React.createElement(TaskCardView, props("sample-unread", { card, onRead })));
+    await act(async () => contextMenus.get("task-card-sample-unread")!({ x: 0, y: 0 }, null));
+    expect(rows(unread.root)).toContain("标为已读");
+    expect(rows(unread.root)).not.toContain("停止");
+    await choose(unread.root, "标为已读");
+    expect(onRead).toHaveBeenCalledTimes(1);
+    await act(async () => unread.unmount());
+
+    const archived = await render(React.createElement(TaskCardView, props("sample-archived", { onUnarchive })));
+    await act(async () => contextMenus.get("task-card-sample-archived")!({ x: 0, y: 0 }, null));
+    await choose(archived.root, "取消归档");
+    expect(onUnarchive).toHaveBeenCalledWith("sample-archived");
+    await act(async () => archived.unmount());
+
+    // Only a task archived itself can come back; one of an archived workspace has no Unarchive.
+    const workspace = await render(React.createElement(TaskCardView, props("sample-archived-workspace", { onUnarchive })));
+    await act(async () => contextMenus.get("task-card-sample-archived-workspace")!({ x: 0, y: 0 }, null));
+    expect(rows(workspace.root)).not.toContain("取消归档");
+    await act(async () => workspace.unmount());
+  });
+
+  it("offers Archive on a done task, and not while it runs", async () => {
+    const onArchive = vi.fn();
+    const done = await render(React.createElement(TaskCardView, props("sample-done", { onArchive })));
+    await act(async () => contextMenus.get("task-card-sample-done")!({ x: 0, y: 0 }, null));
+    expect(rows(done.root).at(-1)).toBe("归档");
+    expect(rows(done.root)).not.toContain("保持未读");
+    await choose(done.root, "归档");
+    expect(onArchive).toHaveBeenCalledWith("sample-done");
+    await act(async () => done.update(React.createElement(TaskCardView, props("sample-done", { onArchive, archivePending: true }))));
+    await act(async () => contextMenus.get("task-card-sample-done")!({ x: 0, y: 0 }, null));
+    expect(rows(done.root)).not.toContain("归档");
+    await act(async () => done.unmount());
+
+    const running = await render(React.createElement(TaskCardView, props("sample-running", { onArchive })));
+    await act(async () => contextMenus.get("task-card-sample-running")!({ x: 0, y: 0 }, null));
+    expect(rows(running.root)).not.toContain("归档");
+    await act(async () => running.unmount());
+    const archived = await render(React.createElement(TaskCardView, props("sample-archived", { onArchive })));
+    await act(async () => contextMenus.get("task-card-sample-archived")!({ x: 0, y: 0 }, null));
+    expect(rows(archived.root)).not.toContain("归档");
+    await act(async () => archived.unmount());
+
+    const onUnread = vi.fn();
+    const unread = await render(React.createElement(TaskCardView, props("sample-done", { onArchive: vi.fn(), onUnread })));
+    await act(async () => contextMenus.get("task-card-sample-done")!({ x: 0, y: 0 }, null));
+    const labels = rows(unread.root);
+    expect(labels.indexOf("归档") - labels.indexOf("保持未读")).toBe(1);
+    await choose(unread.root, "保持未读");
+    expect(onUnread).toHaveBeenCalledWith(expect.objectContaining({ id: "sample-done" }));
+    await act(async () => unread.unmount());
+  });
+
+  it("leaves a right click inside the open menu alone", async () => {
+    const renderer = await render(React.createElement(TaskCardView, props("sample-running")));
+    const root = renderer.root;
+    await act(async () => contextMenus.get("task-card-sample-running")!({ x: 40, y: 60 }, null));
+    const menu = { closest: (selector: string) => (selector.includes("task-card-menu") ? {} : null) };
+    await act(async () => contextMenus.get("task-card-sample-running")!({ x: 300, y: 300 }, menu));
+    expect(root.find((node) => node.props.testID === "task-card-menu-anchor")).toBeTruthy();
+    await act(async () => renderer.unmount());
+  });
+});
+
+describe("TaskCardView details", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("opens the card a double click's first click chose, wherever its second click lands", async () => {
+    // The document's capture listeners run first; one that stops the click keeps it from its target.
+    const listeners: Array<(event: MouseEvent) => void> = [];
+    vi.stubGlobal("document", {
+      addEventListener: (type: string, listener: (event: MouseEvent) => void, capture: boolean) => {
+        if (type === "click" && capture) listeners.push(listener);
+      },
+    });
+    const onOpen = vi.fn();
+    const onSelect = vi.fn();
+    const renderer = await render(
+      React.createElement(
+        React.Fragment,
+        null,
+        React.createElement(TaskCardView, props("sample-running", { onOpen, onSelect })),
+        React.createElement(TaskCardView, props("sample-child-1", { onOpen, onSelect })),
+      ),
+    );
+    const surface = (id: string) => renderer.root.find((node) => typeof node.type === "string" && node.props.testID === `task-card-${id}`);
+    /** A click with the system's count, on a card or on something else (the details panel). */
+    const click = (id: string | null, detail: number) => {
+      let stopped = false;
+      const event = { detail, preventDefault() {}, stopPropagation: () => void (stopped = true) } as unknown as MouseEvent;
+      for (const listener of listeners) listener(event);
+      if (!stopped && id) surface(id).props.onPress({ nativeEvent: event });
+    };
+    const chosen = () => onSelect.mock.calls.map(([card]) => card.id);
+
+    // The system's click count decides, however slow its double-click speed.
+    click("sample-running", 1);
+    click("sample-running", 2);
+    expect(chosen()).toEqual(["sample-running"]);
+    expect(onOpen).toHaveBeenCalledWith("sample-running");
+
+    // The first click brought in the panel and scrolled the lanes: the second
+    // click lands on the panel or on another card, and still opens the first card.
+    for (const second of [null, "sample-child-1"]) {
+      onOpen.mockClear();
+      onSelect.mockClear();
+      click("sample-child-1", 1);
+      click(second === null ? null : "sample-running", 2);
+      expect(chosen()).toEqual(["sample-child-1"]);
+      expect(onOpen.mock.calls).toEqual([["sample-child-1"]]);
+    }
+
+    // A third click, a click elsewhere in between, and Enter (no count) open nothing.
+    onOpen.mockClear();
+    click("sample-running", 3);
+    click("sample-running", 1);
+    click(null, 1);
+    click("sample-running", 2);
+    surface("sample-child-1").props.onPress({ nativeEvent: { detail: 0 } });
+    click(null, 2);
+    expect(onOpen).not.toHaveBeenCalled();
+    await act(async () => renderer.unmount());
+    vi.unstubAllGlobals();
+  });
+
+  it("never asks for the sidebar on a hover: only a click chooses a card", async () => {
+    vi.useFakeTimers();
+    const onDetails = vi.fn();
+    const renderer = await render(React.createElement(TaskCardView, props("sample-running", { onDetails })));
+    await act(async () => hovers.get("task-card-sample-running")!.enter());
+    await act(async () => void vi.advanceTimersByTime(1000));
+    expect(onDetails).not.toHaveBeenCalled();
+    await act(async () => hovers.get("task-card-sample-running")!.leave());
+    await act(async () => renderer.unmount());
+  });
+});
+
+describe("TaskCardView hover layout", () => {
+  const LAYOUT_KEYS = /^(width|height|min|max|padding|margin|flex|gap|rowGap|columnGap|position|top|left|right|bottom|border.*Width|alignItems|alignSelf|justifyContent)/;
+  const flat = (style: unknown) => Object.assign({}, ...[style].flat(Infinity).filter(Boolean)) as Record<string, unknown>;
+
+  /** Every in-flow host element's layout styles; absolutely positioned overlays and their content are skipped. */
+  function layout(root: ReactTestInstance): string[] {
+    const out: string[] = [];
+    const walk = (node: ReactTestInstance, path: string) => {
+      if (typeof node.type === "string") {
+        const style = flat(node.props.style);
+        if (style.position === "absolute") return;
+        const picked = Object.keys(style)
+          .filter((key) => LAYOUT_KEYS.test(key))
+          .sort()
+          .map((key) => `${key}=${JSON.stringify(style[key])}`);
+        out.push(`${path}${node.type}[${node.props.testID ?? ""}] ${picked.join(" ")}`);
+      }
+      node.children.forEach((child, index) => {
+        if (typeof child !== "string") walk(child, `${path}${index}/`);
+      });
+    };
+    walk(root, "");
+    return out;
+  }
+
+  it("moves nothing when the pointer enters a card, with or without a meta row", async () => {
+    for (const fields of [CARD_PRESETS.full, CARD_PRESETS.minimal]) {
+      for (const [id, kind] of [["sample-running"], ["sample-child-1"], ["sample-input"], ["sample-input", "mode"], ["sample-input", "plan"], ["sample-input", "other"]] as const) {
+        const base = sampleCards(NOW).find((item) => item.id === id)!;
+        const card = kind ? { ...base, permission: { ...base.permission!, kind } } : base;
+        const renderer = await render(
+          React.createElement(
+            TaskCardView,
+            props(id, { card, fields: { ...fields.fields, labelLimit: fields.labelLimit }, permissionButtons: BUTTONS }),
+          ),
+        );
+        const before = layout(renderer.root);
+        await act(async () => hovers.get(`task-card-${id}`)!.enter());
+        if (id === "sample-input") {
+          // A request's Stop and Open, of any kind, already sit on their row above its divider: hover floats nothing.
+          expect(renderer.root.findAll((node) => typeof node.type === "string" && /^task-card-.*-overlay$/.test(String(node.props.testID)))).toEqual([]);
+          expect(renderer.root.findAll((node) => typeof node.type === "string" && node.props.testID === "task-card-control-row")).toHaveLength(1);
+        } else {
+          // Stop is on screen, floating over the row's end.
+          const overlay = renderer.root.find((node) => typeof node.type === "string" && node.props.testID === "task-card-stop-overlay");
+          expect(flat(overlay.props.style).position).toBe("absolute");
+        }
+        expect(layout(renderer.root)).toEqual(before);
+        await act(async () => hovers.get(`task-card-${id}`)!.leave());
+        expect(layout(renderer.root)).toEqual(before);
+        await act(async () => renderer.unmount());
+      }
+    }
+  });
+});
+
+describe("TaskCardView hover hints", () => {
+  /** A card root that records its DOM listeners, for the hint layer's delegation. */
+  function fakeCard(testID: string) {
+    const listeners = new Map<string, (event: unknown) => void>();
+    const card = {
+      props: { testID },
+      clientLeft: 1,
+      clientTop: 1,
+      clientWidth: 338,
+      clientHeight: 200,
+      getBoundingClientRect: () => ({ left: 100, top: 50, width: 340, height: 202 }),
+      contains: () => true,
+      addEventListener: (type: string, listener: (event: unknown) => void) => listeners.set(type, listener),
+      removeEventListener: (type: string) => listeners.delete(type),
+    };
+    return { card, listeners };
+  }
+
+  /** The DOM element a host node with a hint key draws as, at a window box. */
+  function mark(key: string, box: { left: number; top: number; width: number; height: number }) {
+    const element = {
+      isConnected: true,
+      getAttribute: (name: string) => (name === "data-bchint" ? key : null),
+      getBoundingClientRect: () => box,
+      closest: () => element,
+    };
+    return element;
+  }
+
+  it.each([
+    ["zh", "/Users/luke/work/project", "工作目录：~/work/project"],
+    ["en", "/srv/project", "Directory: /srv/project"],
+    ["zh", "", ""],
+  ] as const)("shows the working directory in the location hint (%s, %s)", async (language, cwd, expected) => {
+    vi.useFakeTimers();
+    try {
+      const { card: host, listeners } = fakeCard("task-card-sample-running");
+      const base = props("sample-running");
+      let renderer!: TestRenderer.ReactTestRenderer;
+      await act(async () => {
+        renderer = TestRenderer.create(React.createElement(TaskCardView, { ...base, language, card: { ...base.card, location: { ...base.card.location, cwd } } }), {
+          createNodeMock: (node) => (node.props as Record<string, unknown>).testID === "task-card-sample-running" ? host : { props: node.props },
+        });
+      });
+      await act(async () => listeners.get("pointerover")!({ pointerType: "mouse", target: mark("location", { left: 112, top: 80, width: 120, height: 20 }) }));
+      await act(async () => { vi.advanceTimersByTime(400); });
+      const hint = texts(renderer.root.find((node) => typeof node.type === "string" && node.props.testID === "task-card-hint")).join("");
+      if (expected) expect(hint.split("\n").at(-1)).toBe(expected);
+      else expect(hint).not.toContain("工作目录：");
+      await act(async () => renderer.unmount());
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("marks the meta row, status, pills, times and stop options, and names each", async () => {
+    vi.useFakeTimers();
+    try {
+      const { card, listeners } = fakeCard("task-card-sample-running");
+      let renderer!: TestRenderer.ReactTestRenderer;
+      await act(async () => {
+        renderer = TestRenderer.create(React.createElement(TaskCardView, props("sample-running")), {
+          createNodeMock: (node) => {
+            const nodeProps = node.props as Record<string, unknown>;
+            return nodeProps.testID === "task-card-sample-running" ? card : { props: nodeProps };
+          },
+        });
+      });
+      const root = renderer.root;
+      const keys = root
+        .findAll((node) => typeof node.type === "string" && node.props.dataSet?.bchint !== undefined)
+        .map((node) => node.props.dataSet.bchint as string);
+      expect(keys).toEqual(expect.arrayContaining(["project", "location", "status", "title", "model", "branch", "subtasks", "started", "timer"]));
+
+      const hint = () => root.findAll((node) => typeof node.type === "string" && node.props.testID === "task-card-hint");
+      const show = async (key: string, box: { left: number; top: number; width: number; height: number }) => {
+        await act(async () => listeners.get("pointerover")!({ pointerType: "mouse", target: mark(key, box) }));
+        await act(async () => { vi.advanceTimersByTime(400); });
+        return texts(hint()[0]!).join("");
+      };
+
+      await act(async () => listeners.get("pointerover")!({ pointerType: "mouse", target: mark("branch", { left: 220, top: 140, width: 120, height: 20 }) }));
+      await act(async () => { vi.advanceTimersByTime(399); });
+      expect(hint()).toHaveLength(0);
+      await act(async () => { vi.advanceTimersByTime(1); });
+      expect(texts(hint()[0]!).join("")).toBe("分支：feat/tasks-board\n有未提交改动\n领先 3 个提交");
+
+      expect(await show("model", { left: 112, top: 140, width: 100, height: 20 })).toBe("模型：Codex GPT-5.5 Codex\n思考强度：Medium");
+      expect(texts(root.find((node) => typeof node.type === "string" && node.props.testID === "agent-pill-thinking"))).toEqual(["Medium"]);
+      expect(await show("status", { left: 112, top: 80, width: 16, height: 20 })).toBe("状态：运行中");
+      expect(await show("title", { left: 134, top: 80, width: 260, height: 40 })).toBe(props("sample-running").card.title);
+      expect(openDetailsLayer).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ isConnected: true }), "below");
+      expect(await show("timer", { left: 180, top: 230, width: 60, height: 18 })).toBe("本轮已运行：12m 30s");
+      expect(await show("subtasks", { left: 112, top: 166, width: 80, height: 20 })).toBe("3 个子任务：2 运行中 · 1 已完成");
+
+      // Touch has no hover, and leaving the card closes the hint.
+      await act(async () => listeners.get("pointerleave")!({}));
+      expect(hint()).toHaveLength(0);
+      await act(async () => listeners.get("pointerover")!({ pointerType: "touch", target: mark("status", { left: 112, top: 80, width: 16, height: 20 }) }));
+      await act(async () => { vi.advanceTimersByTime(400); });
+      expect(hint()).toHaveLength(0);
+      const separate = props("sample-running");
+      separate.fields = { ...separate.fields, provider: false, model: false };
+      await act(async () => renderer.update(React.createElement(TaskCardView, separate)));
+      expect(texts(root.find((node) => typeof node.type === "string" && node.props.testID === "pill-thinking"))).toEqual(["Medium"]);
+      expect(await show("thinking", { left: 112, top: 140, width: 40, height: 20 })).toBe("思考强度：Medium");
+      await act(async () => renderer.unmount());
+      expect(listeners.size).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("draws a question divider's wait as clock and length, the hover saying how long it has waited", async () => {
+    vi.useFakeTimers();
+    try {
+      const { card: host, listeners } = fakeCard("task-card-sample-input");
+      const input = props("sample-input").card;
+      const card = { ...input, permission: { requestId: "q", kind: "question" as const, title: "Question", summary: null, actions: [], remaining: 0 } };
+      let renderer!: TestRenderer.ReactTestRenderer;
+      await act(async () => {
+        renderer = TestRenderer.create(React.createElement(TaskCardView, props(card.id, { card, permissionButtons: permissionButtons(card.permission, "zh", true) })), {
+          createNodeMock: (node) => {
+            const nodeProps = node.props as Record<string, unknown>;
+            return nodeProps.testID === "task-card-sample-input" ? host : { props: nodeProps };
+          },
+        });
+      });
+      const divider = renderer.root.find((node) => typeof node.type === "string" && node.props.testID === "task-card-question-divider");
+      expect(texts(divider)).toEqual(["待回答", "·", "4m"]);
+      await act(async () => listeners.get("pointerover")!({ pointerType: "mouse", target: mark("timer", { left: 300, top: 200, width: 40, height: 18 }) }));
+      await act(async () => { vi.advanceTimersByTime(400); });
+      const hint = renderer.root.find((node) => typeof node.type === "string" && node.props.testID === "task-card-hint");
+      const started = formatFooterStamp(new Date(Date.parse(card.timing.attentionAt ?? card.timing.turnStartedAt!)), new Date(NOW));
+      expect(texts(hint).join("")).toBe(`开始等待：${started}\n已等待 4m`);
+      await act(async () => renderer.unmount());
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("names a card action only after its label folds into an icon", async () => {
+    vi.useFakeTimers();
+    try {
+      const { card: host, listeners } = fakeCard("task-card-sample-child-1");
+      const child = { ...props("sample-child-1").card, stoppable: false, children: [] };
+      let renderer!: TestRenderer.ReactTestRenderer;
+      await act(async () => {
+        renderer = TestRenderer.create(React.createElement(TaskCardView, props(child.id, { card: child })), {
+          createNodeMock: (node) => {
+            const nodeProps = node.props as Record<string, unknown>;
+            return nodeProps.testID === "task-card-sample-child-1" ? host : { props: nodeProps };
+          },
+        });
+      });
+      const root = renderer.root;
+      await act(async () => hovers.get("task-card-sample-child-1")!.enter());
+      const row = root
+        .find((node) => typeof node.type === "string" && node.props.testID === "task-card-open-overlay")
+        .find((node) => typeof node.type === "string" && typeof node.props.onLayout === "function");
+      const keys = () => root
+        .findAll((node) => typeof node.type === "string" && node.props.dataSet?.bchint !== undefined)
+        .map((node) => node.props.dataSet.bchint as string);
+      expect(keys()).not.toEqual(expect.arrayContaining(["action-open-parent", "action-open"]));
+
+      await act(async () => {
+        row.props.onLayout({ nativeEvent: { layout: { width: 72 } } });
+        for (const label of row.findAll((node) => (node.type as unknown) === "Text" && typeof node.props.onLayout === "function")) {
+          label.props.onLayout({ nativeEvent: { layout: { width: texts(label).join("").includes("父") ? 96 : 32 } } });
+        }
+      });
+      expect(keys()).toEqual(expect.arrayContaining(["action-open-parent", "action-open"]));
+
+      await act(async () => listeners.get("pointerover")!({ pointerType: "mouse", target: mark("action-open-parent", { left: 300, top: 230, width: 28, height: 28 }) }));
+      await act(async () => { vi.advanceTimersByTime(400); });
+      const hint = root.find((node) => typeof node.type === "string" && node.props.testID === "task-card-hint");
+      expect(texts(hint).join("")).toBe("打开父任务");
+
+      await act(async () => row.props.onLayout({ nativeEvent: { layout: { width: 900 } } }));
+      expect(keys()).not.toEqual(expect.arrayContaining(["action-open-parent", "action-open"]));
+      await act(async () => renderer.unmount());
+      expect(listeners.size).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe("card action leaf migration", () => {
+  const host = (root: ReactTestInstance, testID: string) =>
+    root.find((node) => typeof node.type === "string" && node.props.testID === testID);
+  const flat = (node: ReactTestInstance) => Object.assign({}, ...[node.props.style].flat(Infinity).filter(Boolean));
+  const transition = {
+    transitionProperty: "background-color, border-color, box-shadow, color, opacity",
+    transitionDuration: "120ms",
+    transitionTimingFunction: "ease-out",
+  };
+
+  it("expands only a clipped option on hover and closes after the return animation", async () => {
+    vi.useFakeTimers();
+    optionExpansion.open.mockClear();
+    optionExpansion.setExpanded.mockClear();
+    optionExpansion.close.mockClear();
+    const press = vi.fn();
+    try {
+      const renderer = await render(React.createElement(ActionRow, {
+        testID: "option-row",
+        children: React.createElement(CardButton, { tokens: taskTokens(THEME), compact: false, label: "A long option", labelOnly: true, look: "plain", onPress: press, testID: "option" }),
+      }));
+      const button = () => host(renderer.root, "option");
+      optionExpansion.clipped = false;
+      await act(async () => button().props.onHoverIn({}));
+      expect(optionExpansion.open).not.toHaveBeenCalled();
+      await act(async () => button().props.onHoverOut({}));
+      optionExpansion.clipped = true;
+      await act(async () => button().props.onHoverIn({}));
+      expect(optionExpansion.open).toHaveBeenCalledOnce();
+      expect(optionExpansion.setExpanded).toHaveBeenLastCalledWith(true);
+      expect(button().findAll((node) => typeof node.type === "string" && node.props["aria-hidden"] === true)).toHaveLength(1);
+      await act(async () => button().props.onPress({ nativeEvent: { detail: 0 } }));
+      expect(press).toHaveBeenCalledOnce();
+      await act(async () => button().props.onHoverOut({}));
+      expect(optionExpansion.setExpanded).toHaveBeenLastCalledWith(false);
+      expect(optionExpansion.close).not.toHaveBeenCalled();
+      await act(async () => { vi.advanceTimersByTime(180); });
+      expect(optionExpansion.close).toHaveBeenCalledOnce();
+      expect(button().findAll((node) => typeof node.type === "string" && node.props["aria-hidden"] === true)).toHaveLength(0);
+      await act(async () => renderer.unmount());
+    } finally {
+      optionExpansion.clipped = false;
+      vi.useRealTimers();
+    }
+  });
+
+  it.each([1, 1.5])("preserves card targets and web transitions at font scale %s", async (factor) => {
+    for (const compact of [false, true]) {
+      const renderer = await render(React.createElement(TasksTypographyScale, {
+        factor,
+        children: React.createElement(React.Fragment, null,
+          React.createElement(TaskCardView, props("sample-running", { compact })),
+          React.createElement(CardButton, {
+            tokens: taskTokens(THEME), compact, label: "Archive", icon: "Archive", look: "archive", onPress() {}, testID: "standalone-action",
+          }),
+        ),
+      }));
+      if (!compact) await act(async () => hovers.get("task-card-sample-running")!.enter());
+      const open = host(renderer.root, "task-card-open-tab");
+      const stop = renderer.root.find((node) => typeof node.type === "string" && node.props.accessibilityLabel === "停止");
+      expect(flat(open)).toMatchObject(compact
+        ? { minHeight: 32, minWidth: 32, borderRadius: 7 }
+        : { height: Math.round(26 * factor), borderRadius: 6 });
+      // Outside ActionRow, the compact minimum width grows with type; inside,
+      // useActionFit retains its authored target until the full label is measured.
+      expect(flat(host(renderer.root, "standalone-action"))).toMatchObject(compact
+        ? { minHeight: 32, minWidth: Math.round(32 * factor), borderRadius: 7 }
+        : { height: Math.round(26 * factor), borderRadius: 6 });
+      expect(flat(stop)).toMatchObject(compact
+        ? { minHeight: Math.round(32 * factor), borderTopLeftRadius: 7 }
+        : { height: Math.round(26 * factor), borderTopLeftRadius: 6 });
+      for (const node of [open, stop, host(renderer.root, "task-card-sample-running"), host(renderer.root, "pill-subtasks")]) {
+        expect(flat(node)).toMatchObject(transition);
+      }
+      await act(async () => renderer.unmount());
+
+      const unread = props("sample-unread", { compact, onRead() {} });
+      const readRenderer = await render(React.createElement(TasksTypographyScale, {
+        factor,
+        children: React.createElement(TaskCardView, { ...unread, card: { ...unread.card, readable: true } }),
+      }));
+      if (!compact) await act(async () => hovers.get("task-card-sample-unread")!.enter());
+      const read = host(readRenderer.root, "task-card-read");
+      expect(flat(read)).toMatchObject(compact
+        ? { minHeight: Math.round(32 * factor), borderRadius: 7 }
+        : { height: Math.round(26 * factor), borderRadius: 6 });
+      expect(flat(read)).toMatchObject(transition);
+      await act(async () => readRenderer.unmount());
+    }
+  });
+
+  it.each([
+    { compact: false, fullWidth: 138, foldedWidth: 26 },
+    { compact: true, fullWidth: 143, foldedWidth: 32 },
+  ])("keeps authored fit chrome and restores labels for compact=$compact", async ({ compact, fullWidth, foldedWidth }) => {
+    const renderer = await render(React.createElement(TasksTypographyScale, {
+      factor: 1.5,
+      children: React.createElement(ActionRow, {
+        testID: "migration-actions",
+        children: React.createElement(CardButton, {
+          tokens: taskTokens(THEME), compact, label: "Archive", icon: "Archive", look: "archive", onPress() {}, testID: "migration-archive",
+        }),
+      }),
+    }));
+    const row = host(renderer.root, "migration-actions");
+    const button = () => host(renderer.root, "migration-archive");
+    const label = button().find((node) => (node.type as unknown) === "Text");
+    await act(async () => label.props.onLayout({ nativeEvent: { layout: { width: 100 } } }));
+    await act(async () => row.props.onLayout({ nativeEvent: { layout: { width: fullWidth } } }));
+    expect(texts(button())).toEqual(["Archive"]);
+    expect(flat(button()).minWidth).toBe(fullWidth);
+    await act(async () => row.props.onLayout({ nativeEvent: { layout: { width: fullWidth - 1 } } }));
+    expect(texts(button())).toEqual([]);
+    expect(flat(button())).toMatchObject({ width: foldedWidth, minWidth: foldedWidth });
+    expect(button().props.accessibilityLabel).toBe("Archive");
+    await act(async () => row.props.onLayout({ nativeEvent: { layout: { width: fullWidth } } }));
+    expect(texts(button())).toEqual(["Archive"]);
+    await act(async () => renderer.unmount());
+  });
+
+  it("keeps action dependencies below the card containers and callers on direct leaf imports", () => {
+    const source = (name: string) => readFileSync(new URL(`../../client/tasks/cards/${name}`, import.meta.url), "utf8");
+    const imports = (name: string) => [...source(name).matchAll(/(?:import|export)\s[\s\S]*?from\s+["']([^"']+)["']/g)].map((match) => match[1]);
+    for (const name of ["action-style.ts", "action-buttons.tsx"]) {
+      expect(imports(name).filter((path) => /^(?:\.\/(?:task-card|detail-cards|index)|\.\.\/cards)(?:\.[jt]sx?)?$/.test(path!))).toEqual([]);
+    }
+    for (const name of ["task-card.tsx", "detail-cards.tsx"]) {
+      expect(imports(name)).toEqual(expect.arrayContaining(["./action-style", "./action-buttons"]));
+    }
+    expect(imports("detail-cards.tsx")).not.toContain("./task-card");
+    expect(source("task-card.tsx")).not.toMatch(/export (?:function|const|type) (?:CardButton|buttonHue|requestLook|arrowInset|CONFIRM_STOP_ICON|CardButtonLook)\b/);
+  });
+});

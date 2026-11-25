@@ -1,0 +1,20 @@
+{
+  "repository": "https://github.com/electron/fuses",
+  "readAt": "2026-11-23",
+  "files": [
+    {
+      "url": "https://raw.githubusercontent.com/electron/fuses/main/src/config.ts",
+      "sha256": "851455b915ad3d16e8edfb5fed7f467107cb2e06261af91f4a367f76addd6932"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/electron/fuses/main/src/constants.ts",
+      "sha256": "df70fed175ce319b6e193ee479791f0cbb81c229f4a743e0825372f75a96ab5d"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/electron/fuses/main/src/index.ts",
+      "sha256": "acbcf7b79d85223983e43550c9517a2d4158f139d6fddafc80a9af452ef5efa4"
+    }
+  ],
+  "use": "按公开Fuse位协议进行特定加固；不禁用插件所需RunAsNode",
+  "license": "MIT"
+}

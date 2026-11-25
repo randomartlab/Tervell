@@ -1,0 +1,5 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": { "lib": ["ESNext", "DOM", "DOM.Iterable"], "types": ["bun", "node"] },
+  "include": ["verify-mobile-tunnel.ts", "../tests/mobile-tunnel.integration.test.ts"]
+}

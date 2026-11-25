@@ -1,0 +1,50 @@
+[
+  {
+    "name": "@noble/ciphers",
+    "version": "2.4.0",
+    "url": "https://registry.npmjs.org/@noble/ciphers/-/ciphers-2.4.0.tgz",
+    "integrity": "sha512-AnjFn0Jv92laAkvMrghlFZq4qQCIN/4DxFV/eooqtC2YTjB7kBeLMS2T9KJX4Dn+ZVXLOwK0lSgqDtx9gvxtiw==",
+    "retrieved": "2026-11-22",
+    "sourceLock": "Paseo c2a24ae81e6f2f91abb84854c2046556355f780b package-lock.json"
+  },
+  {
+    "name": "@noble/curves",
+    "version": "2.4.0",
+    "url": "https://registry.npmjs.org/@noble/curves/-/curves-2.4.0.tgz",
+    "integrity": "sha512-P4/62zrgfH33CneE3Dn4WhJVA22YUU0eR51wKIan4NVRvwsA0YnPTwWGpNbpuacSujmSFLvyzpyuR30+fbq2Ew==",
+    "retrieved": "2026-11-22",
+    "sourceLock": "Paseo c2a24ae81e6f2f91abb84854c2046556355f780b package-lock.json"
+  },
+  {
+    "name": "@noble/hashes",
+    "version": "2.4.0",
+    "url": "https://registry.npmjs.org/@noble/hashes/-/hashes-2.4.0.tgz",
+    "integrity": "sha512-X5XaVWZIBCT7HHZGm5I7ZQXDwLG+bGXuSrMQAW+7Zvl87h1kmc1ZB1VSRJcpUfoUrGQp4Fkoxm5kZ+Ms+aW+eA==",
+    "retrieved": "2026-11-22",
+    "sourceLock": "Paseo c2a24ae81e6f2f91abb84854c2046556355f780b package-lock.json"
+  },
+  {
+    "name": "tweetnacl",
+    "version": "1.0.3",
+    "url": "https://registry.npmjs.org/tweetnacl/-/tweetnacl-1.0.3.tgz",
+    "integrity": "sha512-6rt+RN7aOi1nGMyC4Xa5DdYiukl2UWCbcJft7YhxReBGQD7OAM8Pbxw6YMo4r2diNEA8FEmu32YOn9rhaiE5yw==",
+    "retrieved": "2026-11-22",
+    "sourceLock": "Paseo c2a24ae81e6f2f91abb84854c2046556355f780b package-lock.json"
+  },
+  {
+    "name": "base64-js",
+    "version": "1.5.1",
+    "url": "https://registry.npmjs.org/base64-js/-/base64-js-1.5.1.tgz",
+    "integrity": "sha512-AKpaYlHn8t4SVbOHCy+b5+KKgvR4vrsD8vbvrbiQJps7fKDTkjkDry6ji0rUJjC0kzbNePLwzxq8iypo41qeWA==",
+    "retrieved": "2026-11-22",
+    "sourceLock": "Paseo c2a24ae81e6f2f91abb84854c2046556355f780b package-lock.json"
+  },
+  {
+    "name": "ws",
+    "version": "8.20.0",
+    "url": "https://registry.npmjs.org/ws/-/ws-8.20.0.tgz",
+    "integrity": "sha512-sAt8BhgNbzCtgGbt2OxmpuryO63ZoDk/sqaB/znQm94T4fCEsy/yV+7CdC1kJhOU9lboAEU7R3kquuycDoibVA==",
+    "retrieved": "2026-11-22",
+    "sourceLock": "Paseo c2a24ae81e6f2f91abb84854c2046556355f780b package-lock.json"
+  }
+]

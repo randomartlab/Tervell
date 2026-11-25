@@ -1,0 +1,5 @@
+React / React DOM 18.3.1
+Copyright Meta Platforms, Inc. and affiliates. MIT License.
+Source: https://github.com/facebook/react/tree/v18.3.1
+Copied from existing workspace dependencies; no package installation.
+Use: rendering third-party client theme contributions inside the isolated theme compatibility renderer.

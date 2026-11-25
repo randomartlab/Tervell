@@ -1,0 +1,132 @@
+{
+  "trae": {
+    "version": "0.216.0-tob",
+    "binary": {
+      "darwin-x86_64": {
+        "archive": "https://lf-cdn.trae.com.cn/obj/trae-com-cn/trae-cli/v2/releases/0.216.0/traex-macos-x86_64.gz",
+        "cmd": "./traecli",
+        "sha256": "a3ebe75916d395d5230ef9b433b3e83abf32e31879d53c83b412ad78232beb1f",
+        "args": [
+          "acp",
+          "serve"
+        ],
+        "sidecars": [
+          {
+            "archive": "https://lf-cdn.trae.com.cn/obj/trae-com-cn/trae-cli/v2/releases/0.216.0/traex-code-mode-host-macos-x86_64.gz",
+            "cmd": "./traex-code-mode-host",
+            "sha256": "3fcc4625dc78b1db731ad247ea21aa50a4aad17cf66072c2702681d1117021ab"
+          }
+        ]
+      },
+      "darwin-aarch64": {
+        "archive": "https://lf-cdn.trae.com.cn/obj/trae-com-cn/trae-cli/v2/releases/0.216.0/traex-macos-aarch64.gz",
+        "cmd": "./traecli",
+        "sha256": "f5465293ed7e97c5b1da7fc3fd142cec090574805c4b4093a17dc05d3e747816",
+        "args": [
+          "acp",
+          "serve"
+        ],
+        "sidecars": [
+          {
+            "archive": "https://lf-cdn.trae.com.cn/obj/trae-com-cn/trae-cli/v2/releases/0.216.0/traex-code-mode-host-macos-aarch64.gz",
+            "cmd": "./traex-code-mode-host",
+            "sha256": "3287d5b5807d721ac23945aafa3a8cf0b02b3b3ccbd648bcd5b7bf82dc1b857d"
+          }
+        ]
+      },
+      "linux-x86_64": {
+        "archive": "https://lf-cdn.trae.com.cn/obj/trae-com-cn/trae-cli/v2/releases/0.216.0/traex-linux-x86_64.gz",
+        "cmd": "./traecli",
+        "sha256": "764aca247f10b5c0f3f1046bacbf1d6bf7864ef046805df866af39f2e634588c",
+        "args": [
+          "acp",
+          "serve"
+        ],
+        "sidecars": [
+          {
+            "archive": "https://lf-cdn.trae.com.cn/obj/trae-com-cn/trae-cli/v2/releases/0.216.0/traex-code-mode-host-linux-x86_64.gz",
+            "cmd": "./traex-code-mode-host",
+            "sha256": "b7c82340512d7f22b89df1c4012d8deec938293da9d9d653cac7b6211fc1befb"
+          }
+        ]
+      },
+      "linux-aarch64": {
+        "archive": "https://lf-cdn.trae.com.cn/obj/trae-com-cn/trae-cli/v2/releases/0.216.0/traex-linux-aarch64.gz",
+        "cmd": "./traecli",
+        "sha256": "6aa3ce06b8034d7d6c4ea47320e297ff767640f20c6c8a333a39e1168418feed",
+        "args": [
+          "acp",
+          "serve"
+        ],
+        "sidecars": [
+          {
+            "archive": "https://lf-cdn.trae.com.cn/obj/trae-com-cn/trae-cli/v2/releases/0.216.0/traex-code-mode-host-linux-aarch64.gz",
+            "cmd": "./traex-code-mode-host",
+            "sha256": "868748fe5b71cb41be7ade9eff6d10fb866743ef0b1cd06c66545f594a542206"
+          }
+        ]
+      },
+      "windows-x86_64": {
+        "archive": "https://lf-cdn.trae.com.cn/obj/trae-com-cn/trae-cli/v2/releases/0.216.0/traex-windows-x86_64.exe.gz",
+        "cmd": "./traecli.exe",
+        "sha256": "37d360c73546634f2c342eee03e1d34378909188398c84c88f10e61d96062810",
+        "args": [
+          "acp",
+          "serve"
+        ],
+        "sidecars": [
+          {
+            "archive": "https://lf-cdn.trae.com.cn/obj/trae-com-cn/trae-cli/v2/releases/0.216.0/traex-code-mode-host-windows-x86_64.exe.gz",
+            "cmd": "./traex-code-mode-host.exe",
+            "sha256": "971767d185ffe7b32ba77e766cb78bb48147dbb1541609fef14546be62daab43"
+          }
+        ]
+      },
+      "windows-aarch64": {
+        "archive": "https://lf-cdn.trae.com.cn/obj/trae-com-cn/trae-cli/v2/releases/0.216.0/traex-windows-aarch64.exe.gz",
+        "cmd": "./traecli.exe",
+        "sha256": "e1ca3792964a3aa0656b460ee1944f37e4c35a467414d86f47f92437c6c0ce0a",
+        "args": [
+          "acp",
+          "serve"
+        ],
+        "sidecars": [
+          {
+            "archive": "https://lf-cdn.trae.com.cn/obj/trae-com-cn/trae-cli/v2/releases/0.216.0/traex-code-mode-host-windows-aarch64.exe.gz",
+            "cmd": "./traex-code-mode-host.exe",
+            "sha256": "b79c3298cf7452107931a11bf7d37bb8f3a18e15e3447025c8254ace8d87580e"
+          }
+        ]
+      }
+    }
+  },
+  "amp": {
+    "version": "0.0.1795478457-g9601b2",
+    "binary": {
+      "darwin-aarch64": {
+        "archive": "https://static.ampcode.com/cli/0.0.1795478457-g9601b2/amp-darwin-arm64",
+        "cmd": "./amp"
+      },
+      "darwin-x86_64": {
+        "archive": "https://static.ampcode.com/cli/0.0.1795478457-g9601b2/amp-darwin-x64",
+        "cmd": "./amp"
+      },
+      "linux-aarch64": {
+        "archive": "https://static.ampcode.com/cli/0.0.1795478457-g9601b2/amp-linux-arm64",
+        "cmd": "./amp"
+      },
+      "linux-x86_64": {
+        "archive": "https://static.ampcode.com/cli/0.0.1795478457-g9601b2/amp-linux-x64",
+        "cmd": "./amp"
+      },
+      "windows-aarch64": {
+        "archive": "https://static.ampcode.com/cli/0.0.1795478457-g9601b2/amp-windows-arm64.exe",
+        "cmd": "./amp.exe"
+      },
+      "windows-x86_64": {
+        "archive": "https://static.ampcode.com/cli/0.0.1795478457-g9601b2/amp-windows-x64.exe",
+        "cmd": "./amp.exe"
+      }
+    }
+  }
+}

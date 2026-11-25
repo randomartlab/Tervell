@@ -1,0 +1,23 @@
+{
+  "name": "@proma/testing",
+  "version": "0.1.1",
+  "description": "回放引擎 + 标准 fixture（INF-04）",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./fixtures": "./src/fixtures.ts",
+    "./replay": "./src/replay.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@proma/protocol": "workspace:*",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.9.0"
+  }
+}

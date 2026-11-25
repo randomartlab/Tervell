@@ -1,0 +1,1032 @@
+import React from "react";
+import TestRenderer, { act, type ReactTestRenderer } from "react-test-renderer";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import "./helpers/quiet-renderer";
+import {
+  permissionButtons,
+  QUICK_ANSWER_COLUMNS,
+  respondToPermission,
+  STOP_RPC_TIMEOUT_MS,
+  STOP_VERIFY_MS,
+  READ_VERIFY_MS,
+  useReadControl,
+  stopDialogText,
+  useStopControl,
+  useUnarchiveControl,
+  useArchiveControl,
+  type ArchiveControl,
+  type ReadControl,
+  type StopControl,
+  type UnarchiveControl,
+} from "../../client/tasks/actions";
+import type { TaskCard, TaskPermission, TaskPermissionAction } from "../../client/tasks/model";
+import { stopTargets } from "../../client/tasks/actions/stop-targets";
+import { createFakePaseo, makeAgent } from "./helpers/fake-paseo";
+
+const mocks = vi.hoisted(() => ({
+  capabilities: vi.fn(),
+  stop: vi.fn(),
+  stopped: vi.fn(),
+  unarchive: vi.fn(),
+  read: vi.fn(),
+  toastError: vi.fn(),
+  language: vi.fn((): "en" | "zh" => "en"),
+  platform: { OS: "web" as string },
+  alert: vi.fn(),
+  /** A fresh client per test: server capabilities and earlier stops are kept per client. */
+  paseo: {} as object,
+}));
+
+vi.mock("react-native", () => ({ Platform: mocks.platform, Alert: { alert: mocks.alert } }));
+
+vi.mock("@getpaseo/plugin/client", () => ({
+  usePaseo: () => mocks.paseo,
+  useRpc(contract: { name: string }) {
+    if (contract.name === "tasks.unarchive") return mocks.unarchive;
+    if (contract.name === "tasks.read") return mocks.read;
+    return contract.name === "tasks.capabilities" ? mocks.capabilities : contract.name === "tasks.stopped" ? mocks.stopped : mocks.stop;
+  },
+}));
+vi.mock("@getpaseo/plugin/client/ui", () => ({
+  useToast: () => ({ error: mocks.toastError, show: vi.fn() }),
+}));
+vi.mock("../../client/tasks/i18n", () => ({ useTasksLanguage: mocks.language }));
+
+(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+function permission(kind: TaskPermission["kind"], actions: TaskPermissionAction[] = []): TaskPermission {
+  return { requestId: "permission-1", kind, title: "Permission", summary: null, actions, remaining: 0 };
+}
+
+function action(overrides: Partial<TaskPermissionAction> = {}): TaskPermissionAction {
+  return {
+    id: "allow-once",
+    label: "Allow once",
+    behavior: "allow",
+    variant: "primary",
+    ...overrides,
+  };
+}
+
+beforeEach(() => { mocks.paseo = {}; });
+
+describe("Tasks permission actions", () => {
+  type Question = NonNullable<TaskPermission["questions"]>[number];
+  // A Codex request_user_input_async request as the daemon hands it over: the
+  // model writes only the title and option strings; id, header and isOther are the daemon's.
+  const choice = (labels: string[], overrides: Partial<Question> = {}): TaskPermission => ({
+    ...permission("question"),
+    questions: [{ id: "0", header: "Question 1", question: "按上述方案执行吗？", multiSelect: false,
+      options: labels.map((label) => ({ label })), ...overrides }],
+  });
+
+  it.each([
+    ["Chinese", ["允许", "拒绝"]],
+    ["reversed", ["拒绝", "允许"]],
+    ["the host's own words", ["按此方案执行", "先不要改"]],
+    ["an ordinary two-way choice", ["从现在持续观察一小时", "回看最近一小时即可"]],
+    ["English", ["Go ahead", "Not yet"]],
+    ["Japanese", ["はい", "いいえ"]],
+    ["mixed script and emoji", ["Ship it 🚀", "再想想"]],
+  ])("answers a %s two-option question with its options as written", async (_name, labels) => {
+    for (const language of ["zh", "en"] as const) {
+      const fake = createFakePaseo({ agents: [makeAgent({ id: "agent-a" })] });
+      const buttons = permissionButtons(choice(labels), language);
+      expect(buttons.map((button) => [button.label, button.kind, button.variant, button.action.behavior])).toEqual(
+        labels.map((label) => [label, "respond", "secondary", "allow"]),
+      );
+      for (const [index, button] of buttons.entries()) {
+        await respondToPermission(fake.paseo, "agent-a", button, `request-${index}`);
+      }
+      expect(fake.permissionResponses).toEqual(labels.map((answer, index) => ({
+        agentId: "agent-a", requestId: `request-${index}`,
+        response: { behavior: "allow", updatedInput: { answers: { "Question 1": answer } } },
+      })));
+    }
+  });
+
+  it("keys the answer by the request's own header", async () => {
+    const fake = createFakePaseo();
+    const [first] = permissionButtons(choice(["Keep", "Drop"], { header: "Migration", id: "migration_choice" }));
+    await respondToPermission(fake.paseo, "agent-a", first!, "request-a");
+    expect(fake.permissionResponses[0]?.response).toEqual({ behavior: "allow", updatedInput: { answers: { Migration: "Keep" } } });
+  });
+
+  it("answers options up to QUICK_ANSWER_COLUMNS wide and leaves a longer one to the agent tab", () => {
+    expect(QUICK_ANSWER_COLUMNS).toBe(24);
+    expect(permissionButtons(choice(["一二三四五六七八九十一二", "Twenty-four columns wide"]))[0]?.kind).toBe("respond");
+    expect(permissionButtons(choice(["一二三四五六七八九十一二三", "No"]))[0]?.kind).toBe("open");
+    expect(permissionButtons(choice(["Yes", "Twenty-five columns wide!"]))[0]?.kind).toBe("open");
+    expect(permissionButtons(choice(["Yes", "🚀".repeat(13)]))[0]?.kind).toBe("open");
+  });
+
+  it.each<[string, Partial<Question>]>([
+    ["multi-select", { multiSelect: true }],
+    ["no header", { header: undefined }],
+    ["one option", { options: [{ label: "允许" }] }],
+    ["three options", { options: [{ label: "A" }, { label: "B" }, { label: "C" }] }],
+    ["no options", { options: [] }],
+    ["duplicate options", { options: [{ label: "允许" }, { label: "允许" }] }],
+    ["option descriptions", { options: [{ label: "Keep", description: "Leaves the schema as it is" }, { label: "Drop" }] }],
+    ["option previews", { options: [{ label: "A", preview: "```ts\nconst a = 1\n```" }, { label: "B" }] }],
+    ["a two-line option", { options: [{ label: "Yes\nnow" }, { label: "No" }] }],
+  ])("leaves a question with %s to the agent tab", (_name, overrides) => {
+    expect(permissionButtons(choice(["Yes", "No"], overrides)).map((button) => button.kind)).toEqual(["open"]);
+  });
+
+  it("leaves several questions to the agent tab", () => {
+    const request = choice(["Yes", "No"]);
+    request.questions = [...request.questions!, { ...request.questions![0]!, id: "1", header: "Question 2" }];
+    expect(permissionButtons(request).map((button) => button.kind)).toEqual(["open"]);
+  });
+
+  it("sends only one answer while it is pending and allows a retry after a failure", async () => {
+    const fake = createFakePaseo();
+    const pending = deferred<void>();
+    const send = vi.fn().mockReturnValueOnce(pending.promise).mockResolvedValue(undefined);
+    vi.spyOn(fake.paseo.agents, "ref").mockReturnValue({ respondToPermission: send } as unknown as ReturnType<typeof fake.paseo.agents.ref>);
+    const buttons = permissionButtons(choice(["Go ahead", "Not yet"]));
+    const first = respondToPermission(fake.paseo, "agent-a", buttons[0]!, "request-a");
+    const failed = expect(first).rejects.toThrow("socket closed");
+    await respondToPermission(fake.paseo, "agent-a", buttons[1]!, "request-a");
+    expect(send).toHaveBeenCalledTimes(1);
+    pending.reject(new Error("socket closed"));
+    await failed;
+    await respondToPermission(fake.paseo, "agent-a", buttons[1]!, "request-a");
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(send.mock.calls[1]?.[0]).toEqual({ requestId: "request-a",
+      response: { behavior: "allow", updatedInput: { answers: { "Question 1": "Not yet" } } } });
+  });
+
+  it.each(["tool", "plan", "mode"] as const)("uses request actions for %s permissions", (kind) => {
+    const requested = [
+      action(),
+      action({ id: "reject", label: "No thanks", behavior: "deny", variant: "danger" }),
+    ];
+    expect(permissionButtons(permission(kind, requested), "en")).toEqual([
+      { key: "allow-once", label: "Allow once", variant: "primary", kind: "respond", action: requested[0] },
+      { key: "reject", label: "No thanks", variant: "danger", kind: "respond", action: requested[1] },
+    ]);
+  });
+
+  it("translates Paseo's plan buttons in Chinese and keeps other labels as sent", () => {
+    const requested = [
+      action({ id: "reject", label: "Reject", behavior: "deny", variant: "danger" }),
+      action({ id: "dismiss", label: "Dismiss", behavior: "deny", variant: "danger" }),
+      action({ id: "implement", label: "Implement" }),
+      action({ id: "implement_resume", label: "Implement with Bypass", variant: "secondary" }),
+    ];
+    expect(permissionButtons(permission("plan", requested), "zh").map(({ label }) => label)).toEqual(["拒绝", "拒绝", "实施", "Implement with Bypass"]);
+    expect(permissionButtons(permission("plan", requested), "en").map(({ label }) => label)).toEqual(["Reject", "Dismiss", "Implement", "Implement with Bypass"]);
+    expect(permissionButtons(permission("tool", [action()]), "zh")[0]?.label).toBe("Allow once");
+  });
+
+  it.each(["tool", "plan", "mode"] as const)("uses bilingual Allow and Deny fallbacks for %s permissions", (kind) => {
+    expect(permissionButtons(permission(kind), "en")).toEqual([
+      { key: "allow", label: "Allow", variant: "primary", kind: "respond", action: { behavior: "allow", id: null } },
+      { key: "deny", label: "Deny", variant: "secondary", kind: "respond", action: { behavior: "deny", id: null } },
+    ]);
+    expect(permissionButtons(permission(kind), "zh").map(({ label }) => label)).toEqual(["允许", "拒绝"]);
+  });
+
+  it.each(["question", "other"] as const)("opens the agent tab for %s permissions, even when actions are present", (kind) => {
+    const buttons = permissionButtons(permission(kind, [action()]), "zh");
+    expect(buttons).toEqual([{
+      key: "open",
+      label: "去回答",
+      variant: "primary",
+      kind: "open",
+      action: { behavior: "deny", id: null },
+    }]);
+    expect(permissionButtons(permission(kind), "en")[0]?.label).toBe("Answer");
+  });
+
+  it("uses a behavior-based variant only when a request action omits one", () => {
+    expect(
+      permissionButtons(permission("tool", [
+        action({ variant: null }),
+        action({ id: "reject", behavior: "deny", variant: null }),
+      ])).map(({ variant }) => variant),
+    ).toEqual(["primary", "secondary"]);
+  });
+
+  it("sends the selected action payload through the Paseo fake", async () => {
+    const fake = createFakePaseo({ agents: [makeAgent({ id: "agent-a" })] });
+    const buttons = permissionButtons(permission("tool", [
+      action(),
+      action({ id: "reject", label: "Deny", behavior: "deny", variant: "danger" }),
+    ]));
+
+    await respondToPermission(fake.paseo, "agent-a", buttons[0]!, "request-a");
+    await respondToPermission(fake.paseo, "agent-a", buttons[1]!, "request-b");
+
+    expect(fake.permissionResponses).toEqual([
+      { agentId: "agent-a", requestId: "request-a", response: { behavior: "allow", selectedActionId: "allow-once" } },
+      { agentId: "agent-a", requestId: "request-b", response: { behavior: "deny", selectedActionId: "reject", message: "Denied by user" } },
+    ]);
+  });
+
+  it("omits selectedActionId for local fallback buttons and does not answer open actions", async () => {
+    const fake = createFakePaseo({ agents: [makeAgent({ id: "agent-a" })] });
+    const fallback = permissionButtons(permission("tool"));
+    await respondToPermission(fake.paseo, "agent-a", fallback[0]!, "request-a");
+    await respondToPermission(fake.paseo, "agent-a", fallback[1]!, "request-b");
+    await expect(respondToPermission(fake.paseo, "agent-a", permissionButtons(permission("question"))[0]!, "request-c"))
+      .rejects.toThrow("This permission request must be answered in the agent tab.");
+
+    expect(fake.permissionResponses).toEqual([
+      { agentId: "agent-a", requestId: "request-a", response: { behavior: "allow" } },
+      { agentId: "agent-a", requestId: "request-b", response: { behavior: "deny", message: "Denied by user" } },
+    ]);
+  });
+});
+
+let latestControl: StopControl | undefined;
+
+const activeAgents = new Set<string>();
+const cards = new Map<string, TaskCard>();
+
+function StopProbe({ verify = false }: { verify?: boolean }) {
+  latestControl = useStopControl({ cardById: (id) => cards.get(id), isActive: verify ? (agentId) => activeAgents.has(agentId) : undefined });
+  return React.createElement("probe");
+}
+
+function taskCard(id: string, children: TaskCard["children"] = []): TaskCard {
+  const card = { id, title: `Task ${id}`, stoppable: true, children } as unknown as TaskCard;
+  cards.set(id, card);
+  for (const child of children) {
+    if (child.kind === "provider" || cards.has(child.id)) continue;
+    taskCard(child.id).stoppable = child.status === "running" || child.status === "needs_input";
+  }
+  return card;
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason: Error) => void;
+  const promise = new Promise<T>((accept, decline) => { resolve = accept; reject = decline; });
+  return { promise, resolve, reject };
+}
+
+describe("Tasks stop control", () => {
+  let renderers: ReactTestRenderer[];
+
+  beforeEach(() => {
+    renderers = [];
+    latestControl = undefined;
+    mocks.capabilities.mockReset().mockResolvedValue({ stop: true });
+    mocks.stop.mockReset().mockResolvedValue({ results: [] });
+    mocks.stopped.mockReset().mockResolvedValue({ stops: [] });
+    mocks.toastError.mockReset();
+    mocks.language.mockReturnValue("en");
+    mocks.platform.OS = "web";
+    mocks.alert.mockReset();
+    activeAgents.clear();
+    cards.clear();
+  });
+
+  afterEach(() => {
+    for (const renderer of renderers) act(() => renderer.unmount());
+    vi.useRealTimers();
+  });
+
+  async function mount(verify = false) {
+    let renderer!: ReactTestRenderer;
+    await act(async () => {
+      renderer = TestRenderer.create(React.createElement(StopProbe, { verify }));
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    renderers.push(renderer);
+    return {
+      control: () => {
+        if (!latestControl) throw new Error("Stop control did not render");
+        return latestControl;
+      },
+      renderer,
+    };
+  }
+
+  it("keeps availability false until the one capability request returns true", async () => {
+    const response = deferred<{ stop: boolean }>();
+    mocks.capabilities.mockReturnValue(response.promise);
+    const mounted = await mount();
+    expect(mounted.control().available).toBe(false);
+    expect(mocks.capabilities).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      mounted.renderer.update(React.createElement(StopProbe, {}));
+      response.resolve({ stop: true });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mounted.control().available).toBe(true);
+    expect(mocks.capabilities).toHaveBeenCalledTimes(1);
+  });
+
+  it("confirms within three seconds, tracks successful stops, and clears the marker on a new run", async () => {
+    mocks.stop.mockResolvedValue({ results: [{ agentId: "agent-a", ok: true, error: null }] });
+    const mounted = await mount();
+    const card = taskCard("agent-a");
+
+    act(() => mounted.control().press(card));
+    expect(mounted.control().phase("agent-a")).toBe("confirming");
+    expect(mocks.stop).not.toHaveBeenCalled();
+
+    await act(async () => {
+      mounted.control().press(card);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(mocks.stop).toHaveBeenCalledWith({ agentIds: ["agent-a"] });
+    expect(mounted.control().phase("agent-a")).toBe("idle");
+    expect(mounted.control().stoppedManually.has("agent-a")).toBe(true);
+
+    act(() => mounted.control().noteRunning("agent-a"));
+    expect(mounted.control().stoppedManually.has("agent-a")).toBe(false);
+  });
+
+  it("asks a context menu's Stop in the browser's confirm on web, and stops only on yes", async () => {
+    mocks.stop.mockResolvedValue({ results: [{ agentId: "agent-a", ok: true, error: null }] });
+    const world = globalThis as { confirm?: unknown };
+    const confirm = vi.fn(() => false);
+    world.confirm = confirm;
+    try {
+      const mounted = await mount();
+      await act(async () => {
+        mounted.control().press(taskCard("agent-a"), { dialog: true });
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      expect(confirm).toHaveBeenCalledWith("Stop this task?\n\nTask agent-a");
+      expect(mocks.stop).not.toHaveBeenCalled();
+      // The dialog replaces the armed button: the card never shows "Confirm stop".
+      expect(mounted.control().phase("agent-a")).toBe("idle");
+
+      confirm.mockReturnValue(true);
+      await act(async () => {
+        mounted.control().press(taskCard("agent-a"), { dialog: true });
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      expect(mocks.stop).toHaveBeenCalledWith({ agentIds: ["agent-a"] });
+    } finally {
+      delete world.confirm;
+    }
+  });
+
+  it("cancels confirmation and returns to idle after the three-second timeout", async () => {
+    vi.useFakeTimers();
+    const mounted = await mount();
+    act(() => mounted.control().press(taskCard("agent-a")));
+    expect(mounted.control().phase("agent-a")).toBe("confirming");
+    act(() => mounted.control().cancel("agent-a"));
+    expect(mounted.control().phase("agent-a")).toBe("idle");
+
+    act(() => mounted.control().press(taskCard("agent-b")));
+    expect(mounted.control().phase("agent-b")).toBe("confirming");
+    act(() => { vi.advanceTimersByTime(3_000); });
+    expect(mounted.control().phase("agent-b")).toBe("idle");
+    expect(mocks.stop).not.toHaveBeenCalled();
+  });
+
+  it("confirms before stopping only active direct children", async () => {
+    mocks.stop.mockResolvedValue({ results: [{ agentId: "parent", ok: true, error: null }] });
+    const mounted = await mount();
+    const card = taskCard("parent", [
+      { id: "running-child", title: "Running", status: "running" },
+      { id: "waiting-child", title: "Waiting", status: "needs_input" },
+      { id: "done-child", title: "Done", status: "done" },
+      { id: "failed-child", title: "Failed", status: "failed" },
+    ]);
+
+    await act(async () => {
+      mounted.control().press(card, { withChildren: true });
+      mounted.control().press(card, { withChildren: true });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mocks.stop).toHaveBeenCalledWith({ agentIds: ["parent", "running-child", "waiting-child"] });
+    expect(mounted.control().phase("parent")).toBe("idle");
+  });
+
+  it("resolves real running descendants through idle and failed parents, skipping provider agents", () => {
+    const grandchild = taskCard("grandchild");
+    const middle = taskCard("middle", [
+      { id: grandchild.id, title: "Grandchild", status: "running" },
+      { id: "provider", title: "Provider", kind: "provider", status: "running" },
+    ]);
+    middle.stoppable = false;
+    middle.waitingOnSubtasks = true;
+    const failed = taskCard("failed", [{ id: "waiting", title: "Waiting", status: "needs_input" }]);
+    failed.stoppable = false;
+    const parent = taskCard("parent", [
+      { id: middle.id, title: "Middle", status: "running", waitingOnSubtasks: true },
+      { id: failed.id, title: "Failed", status: "failed" },
+      { id: grandchild.id, title: "Duplicate", status: "running" },
+    ]);
+    const lookup = (id: string) => cards.get(id);
+    expect(stopTargets(parent, false, lookup)).toEqual(["parent"]);
+    expect(stopTargets(parent, true, lookup)).toEqual(["parent", "grandchild", "waiting"]);
+    parent.stoppable = false;
+    expect(stopTargets(parent, false, lookup)).toEqual([]);
+    expect(stopTargets(parent, true, lookup)).toEqual(["grandchild", "waiting"]);
+    grandchild.stoppable = false;
+    expect(stopTargets(parent, true, lookup)).toEqual(["waiting"]);
+    cards.delete("waiting");
+    expect(stopTargets(parent, true, lookup)).toEqual([]);
+  });
+
+  it("stops descendants from an explicit children-only action and verifies only those targets", async () => {
+    mocks.stop.mockResolvedValue({ results: [{ agentId: "grandchild", ok: true, error: null }] });
+    activeAgents.add("grandchild");
+    const middle = taskCard("middle", [{ id: "grandchild", title: "Grandchild", status: "running" }]);
+    middle.stoppable = false;
+    const parent = taskCard("parent", [{ id: middle.id, title: "Middle", status: "running" }]);
+    parent.stoppable = false;
+    const mounted = await mount(true);
+    await act(async () => { mounted.control().press(parent, { withChildren: true }); mounted.control().press(parent, { withChildren: true }); });
+    expect(mocks.stop).toHaveBeenCalledWith({ agentIds: ["grandchild"] });
+    expect(mounted.control().phase("parent")).toBe("stopping");
+    expect([...mounted.control().stoppedManually]).toEqual(["grandchild"]);
+    activeAgents.delete("grandchild");
+    act(() => mounted.control().reconcile());
+    expect(mounted.control().phase("parent")).toBe("idle");
+    expect(mocks.toastError).not.toHaveBeenCalled();
+  });
+
+  it("uses the latest cards when a web stop is confirmed", async () => {
+    const parent = taskCard("parent", [
+      { id: "child", title: "Child", status: "running" },
+      { id: "remaining", title: "Remaining", status: "needs_input" },
+    ]);
+    parent.stoppable = false;
+    const mounted = await mount();
+    act(() => mounted.control().press(parent, { withChildren: true }));
+    cards.set("child", { ...cards.get("child")!, stoppable: false });
+    await act(async () => mounted.control().press(parent, { withChildren: true }));
+    expect(mocks.stop).toHaveBeenCalledWith({ agentIds: ["remaining"] });
+  });
+
+  it.each(["en", "zh"] as const)("names only descendants in a native confirmation in %s", async (language) => {
+    mocks.platform.OS = "ios";
+    mocks.language.mockReturnValue(language);
+    const parent = taskCard("parent", [{ id: "child", title: "Child", status: "needs_input" }]);
+    parent.stoppable = false;
+    const mounted = await mount();
+    act(() => mounted.control().press(parent, { withChildren: true }));
+    expect(lastAlert().title).toBe(language === "zh" ? "停止 1 个子任务？" : "Stop 1 subtask?");
+    await act(async () => lastAlert().confirm.onPress());
+    expect(mocks.stop).toHaveBeenCalledWith({ agentIds: ["child"] });
+  });
+
+  it("does not arm or send an empty stop when only provider work remains", async () => {
+    const parent = taskCard("parent", [{ id: "provider", title: "Provider", kind: "provider", status: "running" }]);
+    parent.stoppable = false;
+    const mounted = await mount();
+    act(() => mounted.control().press(parent, { withChildren: true }));
+    expect(mounted.control().phase("parent")).toBe("idle");
+    expect(mocks.stop).not.toHaveBeenCalled();
+    expect(mocks.toastError).not.toHaveBeenCalled();
+  });
+
+  it("cancels a self-only confirmation when the parent ends, even if the next caller requests children", async () => {
+    const parent = taskCard("parent", [{ id: "child", title: "Child", status: "running" }]);
+    const mounted = await mount();
+    act(() => mounted.control().press(parent, { withChildren: false }));
+    expect(mounted.control().phase("parent")).toBe("confirming");
+    cards.set(parent.id, { ...parent, stoppable: false, waitingOnSubtasks: true });
+    await act(async () => mounted.control().press(parent, { withChildren: true }));
+    expect(mocks.stop).not.toHaveBeenCalled();
+    expect(mounted.control().phase("parent")).toBe("idle");
+    expect(mocks.toastError).not.toHaveBeenCalled();
+    // The cancelled confirmation must not leak its scope into a new explicit action.
+    act(() => mounted.control().press(parent, { withChildren: true }));
+    await act(async () => mounted.control().press(parent, { withChildren: true }));
+    expect(mocks.stop).toHaveBeenCalledWith({ agentIds: ["child"] });
+  });
+
+  it("keeps a children-only confirmation from stopping a parent that resumes meanwhile", async () => {
+    const parent = taskCard("parent", [{ id: "child", title: "Child", status: "running" }]);
+    parent.stoppable = false;
+    const mounted = await mount();
+    act(() => mounted.control().press(parent, { withChildren: true }));
+    expect(mounted.control().phase(parent.id)).toBe("confirming");
+    cards.set(parent.id, { ...parent, stoppable: true, waitingOnSubtasks: false });
+    await act(async () => mounted.control().press(parent, { withChildren: false }));
+    expect(mocks.stop).toHaveBeenCalledWith({ agentIds: ["child"] });
+  });
+
+  it("quietly ignores a self-only stop when the agent has just finished", async () => {
+    const parent = taskCard("parent");
+    parent.stoppable = false;
+    const mounted = await mount();
+    act(() => mounted.control().press(parent));
+    expect(mocks.stop).not.toHaveBeenCalled();
+    expect(mocks.toastError).not.toHaveBeenCalled();
+    expect(mounted.control().phase(parent.id)).toBe("idle");
+  });
+
+  it("reports an empty children-only stop when an aggregate child contains only provider work", async () => {
+    const middle = taskCard("middle", [{ id: "provider", title: "Provider", kind: "provider", status: "running" }]);
+    middle.stoppable = false;
+    const parent = taskCard("parent", [{ id: middle.id, title: "Middle", status: "running" }]);
+    parent.stoppable = false;
+    const mounted = await mount();
+    act(() => mounted.control().press(parent, { withChildren: true }));
+    expect(mocks.stop).not.toHaveBeenCalled();
+    expect(mocks.toastError).toHaveBeenCalledWith("No stoppable tasks or subtasks");
+    expect(mounted.control().phase(parent.id)).toBe("idle");
+  });
+
+  it("splits more than 50 targets and retains successful markers if another batch rejects", async () => {
+    const parent = taskCard("parent", Array.from({ length: 51 }, (_, index) => ({ id: `child-${index}`, title: "Child", status: "running" })));
+    parent.stoppable = false;
+    mocks.stop.mockImplementation(async ({ agentIds }: { agentIds: string[] }) => {
+      if (agentIds.includes("child-50")) throw new Error("RPC unavailable");
+      return { results: agentIds.map((agentId) => ({ agentId, ok: true, error: null })) };
+    });
+    const mounted = await mount();
+    await act(async () => { mounted.control().press(parent, { withChildren: true }); mounted.control().press(parent, { withChildren: true }); });
+    expect(mocks.stop.mock.calls.map(([input]) => input.agentIds.length)).toEqual([50, 1]);
+    expect(mounted.control().stoppedManually.size).toBe(50);
+    expect(mounted.control().stoppedManually.has("parent")).toBe(false);
+    expect(mounted.control().stoppedManually.has("child-50")).toBe(false);
+    expect(mocks.toastError).toHaveBeenCalledWith("Could not stop task: RPC unavailable");
+    expect(mounted.control().phase("parent")).toBe("idle");
+  });
+
+  type AlertButton = { text: string; style: string; onPress(): void };
+  const lastAlert = () => {
+    const [title, message, buttons, options] = mocks.alert.mock.lastCall as [string, string, AlertButton[], { onDismiss(): void }];
+    return { title, message, buttons, options, cancel: buttons[0]!, confirm: buttons[1]! };
+  };
+
+  it.each(["ios", "android"])("asks in a system dialog on %s, and a double tap never stops", async (os) => {
+    mocks.platform.OS = os;
+    mocks.stop.mockResolvedValue({ results: [{ agentId: "agent-a", ok: true, error: null }] });
+    const mounted = await mount();
+    const card = taskCard("agent-a");
+
+    act(() => mounted.control().press(card));
+    act(() => mounted.control().press(card));
+    expect(mocks.alert).toHaveBeenCalledTimes(1);
+    expect(mounted.control().phase("agent-a")).toBe("idle");
+    expect(mocks.stop).not.toHaveBeenCalled();
+    const dialog = lastAlert();
+    expect(dialog).toMatchObject({ title: "Stop this task?", message: "Task agent-a" });
+    expect(dialog.confirm).toMatchObject({ text: "Stop", style: "destructive" });
+    expect(dialog.cancel).toMatchObject({ text: "Cancel", style: "cancel" });
+
+    await act(async () => {
+      dialog.confirm.onPress();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(mocks.stop).toHaveBeenCalledWith({ agentIds: ["agent-a"] });
+    expect(mounted.control().stoppedManually.has("agent-a")).toBe(true);
+  });
+
+  it("stops nothing when the dialog is cancelled or dismissed, and asks again on the next press", async () => {
+    mocks.platform.OS = "ios";
+    const mounted = await mount();
+    const card = taskCard("agent-a");
+
+    act(() => mounted.control().press(card));
+    act(() => lastAlert().cancel.onPress());
+    act(() => mounted.control().press(card));
+    act(() => lastAlert().options.onDismiss());
+    act(() => mounted.control().press(card));
+
+    expect(mocks.alert).toHaveBeenCalledTimes(3);
+    expect(mocks.stop).not.toHaveBeenCalled();
+  });
+
+  it("names the subtasks a native stop takes along, and stops them on confirm", async () => {
+    mocks.platform.OS = "android";
+    mocks.language.mockReturnValue("zh");
+    const mounted = await mount();
+    const card = taskCard("parent", [
+      { id: "running-child", title: "Running", status: "running" },
+      { id: "done-child", title: "Done", status: "done" },
+    ]);
+
+    act(() => mounted.control().press(card, { withChildren: true }));
+    expect(lastAlert()).toMatchObject({ title: "停止任务和 1 个子任务？", message: "Task parent" });
+    expect(lastAlert().confirm.text).toBe("全部停止");
+    await act(async () => {
+      lastAlert().confirm.onPress();
+      await Promise.resolve();
+    });
+    expect(mocks.stop).toHaveBeenCalledWith({ agentIds: ["parent", "running-child"] });
+  });
+
+  it("heads the dialog with the stop and gives the task's name, cut when long", () => {
+    const card = taskCard("agent-a");
+    expect(stopDialogText(card, { self: true, children: 0 }, "zh")).toEqual({ title: "停止任务？", message: "Task agent-a", cancel: "取消", confirm: "停止" });
+    expect(stopDialogText(card, { self: true, children: 1 }, "en")).toMatchObject({ title: "Stop this task and 1 subtask?", message: "Task agent-a", confirm: "Stop all" });
+    expect(stopDialogText(card, { self: true, children: 3 }, "en").title).toBe("Stop this task and 3 subtasks?");
+    expect(stopDialogText({ ...card, title: ` ${"x".repeat(150)} ` }, { self: true, children: 0 }, "en").message).toBe(`${"x".repeat(119)}\u2026`);
+    expect(stopDialogText(card, { self: false, children: 2 }, "zh").title).toBe("停止 2 个子任务？");
+    expect(stopDialogText(card, { self: false, children: 1 }, "en").title).toBe("Stop 1 subtask?");
+  });
+
+  it("disarms every armed stop at once (Esc), and says when none was armed", async () => {
+    const mounted = await mount();
+    act(() => mounted.control().press(taskCard("agent-a")));
+    act(() => mounted.control().press(taskCard("agent-b")));
+    let disarmed = false;
+    act(() => { disarmed = mounted.control().cancelAll(); });
+    expect(disarmed).toBe(true);
+    expect(mounted.control().phase("agent-a")).toBe("idle");
+    expect(mounted.control().phase("agent-b")).toBe("idle");
+    act(() => { disarmed = mounted.control().cancelAll(); });
+    expect(disarmed).toBe(false);
+  });
+
+  it("keeps Stopping until the agent leaves running, then is done without a toast", async () => {
+    vi.useFakeTimers();
+    mocks.stop.mockResolvedValue({ results: [{ agentId: "agent-a", ok: true, error: null }] });
+    activeAgents.add("agent-a");
+    const mounted = await mount(true);
+    await act(async () => {
+      mounted.control().press(taskCard("agent-a"));
+      mounted.control().press(taskCard("agent-a"));
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(mounted.control().phase("agent-a")).toBe("stopping");
+    // The board still lists it as running right after the stop: the marker stays.
+    act(() => mounted.control().noteRunning("agent-a"));
+    expect(mounted.control().stoppedManually.has("agent-a")).toBe(true);
+    activeAgents.delete("agent-a");
+    act(() => mounted.control().reconcile());
+    expect(mounted.control().phase("agent-a")).toBe("idle");
+    expect(mounted.control().stoppedManually.has("agent-a")).toBe(true);
+    act(() => { vi.advanceTimersByTime(20_000); });
+    expect(mocks.toastError).not.toHaveBeenCalled();
+  });
+
+  it("says so when the daemon accepted the stop but the agent keeps running", async () => {
+    vi.useFakeTimers();
+    mocks.stop.mockResolvedValue({ results: [{ agentId: "zombie", ok: true, error: null }] });
+    activeAgents.add("zombie");
+    const mounted = await mount(true);
+    await act(async () => {
+      mounted.control().press(taskCard("zombie"));
+      mounted.control().press(taskCard("zombie"));
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(mounted.control().phase("zombie")).toBe("stopping");
+    act(() => { vi.advanceTimersByTime(STOP_VERIFY_MS); });
+    expect(mocks.toastError).toHaveBeenCalledWith("Stop was sent, but the task is still running");
+    expect(mounted.control().phase("zombie")).toBe("idle");
+    expect(mounted.control().stoppedManually.has("zombie")).toBe(false);
+  });
+
+  it("fails a stop whose RPC never answers", async () => {
+    vi.useFakeTimers();
+    mocks.stop.mockReturnValue(new Promise(() => {}));
+    const mounted = await mount(true);
+    await act(async () => {
+      mounted.control().press(taskCard("agent-a"));
+      mounted.control().press(taskCard("agent-a"));
+      await Promise.resolve();
+    });
+    expect(mounted.control().phase("agent-a")).toBe("stopping");
+    await act(async () => {
+      vi.advanceTimersByTime(STOP_RPC_TIMEOUT_MS);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(mocks.toastError).toHaveBeenCalledWith("Could not stop task: The stop request did not answer.");
+    expect(mounted.control().phase("agent-a")).toBe("idle");
+  });
+
+  it("reads the server's earlier stops once, and survives a server without the RPC", async () => {
+    mocks.stopped.mockResolvedValue({ stops: [{ agentId: "agent-a", stoppedAt: "2026-10-20T10:00:00.000Z" }] });
+    const mounted = await mount();
+    expect(mocks.stopped).toHaveBeenCalledTimes(1);
+    expect([...mounted.control().restored]).toEqual([["agent-a", "2026-10-20T10:00:00.000Z"]]);
+    mocks.stopped.mockRejectedValue(new Error("Unknown RPC tasks.stopped"));
+    const old = await mount();
+    expect(old.control().restored.size).toBe(0);
+  });
+
+  it("keeps the server's capabilities and earlier stops per client, shown at once when the board mounts again", async () => {
+    mocks.capabilities.mockResolvedValue({ stop: true, read: true });
+    mocks.stopped.mockResolvedValue({ stops: [{ agentId: "agent-a", stoppedAt: "2026-10-20T10:00:00.000Z" }] });
+    const seen: Array<{ stop: boolean; read: boolean; restored: number }> = [];
+    function Both() {
+      const stop = useStopControl({ cardById: (id) => cards.get(id) });
+      const read = useReadControl({});
+      seen.push({ stop: stop.available, read: read.available, restored: stop.restored.size });
+      return React.createElement("probe");
+    }
+    const mountBoth = async () => {
+      let renderer!: ReactTestRenderer;
+      await act(async () => {
+        renderer = TestRenderer.create(React.createElement(Both));
+        for (let index = 0; index < 4; index += 1) await Promise.resolve();
+      });
+      return renderer;
+    };
+    const first = await mountBoth();
+    // Stop and Mark read share one capabilities request.
+    expect(mocks.capabilities).toHaveBeenCalledTimes(1);
+    expect(seen.at(-1)).toEqual({ stop: true, read: true, restored: 1 });
+    act(() => first.unmount());
+
+    mocks.capabilities.mockReturnValue(new Promise(() => {}));
+    mocks.stopped.mockReturnValue(new Promise(() => {}));
+    seen.length = 0;
+    const again = await mountBoth();
+    expect(seen[0]).toEqual({ stop: true, read: true, restored: 1 });
+    expect(mocks.capabilities).toHaveBeenCalledTimes(2);
+    act(() => again.unmount());
+
+    mocks.paseo = {};
+    seen.length = 0;
+    const otherClient = await mountBoth();
+    expect(seen[0]).toEqual({ stop: false, read: false, restored: 0 });
+    act(() => otherClient.unmount());
+  });
+
+  it("surfaces per-agent and rejected RPC failures through the toast", async () => {
+    mocks.stop.mockResolvedValue({ results: [
+      { agentId: "agent-a", ok: false, error: "Paseo CLI timed out." },
+    ] });
+    const mounted = await mount();
+
+    await act(async () => {
+      mounted.control().press(taskCard("agent-a"));
+      mounted.control().press(taskCard("agent-a"));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(mocks.toastError).toHaveBeenCalledWith("Could not stop task: Paseo CLI timed out.");
+
+    mocks.stop.mockRejectedValueOnce(new Error("RPC unavailable"));
+    await act(async () => {
+      mounted.control().press(taskCard("agent-b"));
+      mounted.control().press(taskCard("agent-b"));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(mocks.toastError).toHaveBeenCalledWith("Could not stop task: RPC unavailable");
+  });
+});
+
+describe("Tasks unarchive control", () => {
+  let renderer: ReactTestRenderer | null = null;
+
+  beforeEach(() => {
+    mocks.unarchive.mockReset();
+    mocks.toastError.mockReset();
+    mocks.language.mockReturnValue("en");
+  });
+
+  afterEach(async () => {
+    if (renderer) await act(async () => renderer?.unmount());
+    renderer = null;
+  });
+
+  async function mountUnarchive(verify: (agentId: string) => Promise<boolean | null>) {
+    let control: UnarchiveControl | null = null;
+    function Probe() {
+      control = useUnarchiveControl({ available: true, verify });
+      return null;
+    }
+    await act(async () => {
+      renderer = TestRenderer.create(React.createElement(Probe));
+    });
+    return () => control!;
+  }
+
+  async function press(control: () => UnarchiveControl, agentId: string) {
+    await act(async () => {
+      control().press(agentId);
+      for (let index = 0; index < 6; index += 1) await Promise.resolve();
+    });
+  }
+
+  it("reads the agent again after the RPC, and is quiet when it is back", async () => {
+    mocks.unarchive.mockResolvedValue({ ok: true, error: null });
+    const verify = vi.fn(async () => false);
+    const control = await mountUnarchive(verify);
+    await press(control, "parent");
+    expect(mocks.unarchive).toHaveBeenCalledWith({ agentId: "parent" });
+    expect(verify).toHaveBeenCalledWith("parent");
+    expect(mocks.toastError).not.toHaveBeenCalled();
+    expect(control().pending("parent")).toBe(false);
+  });
+
+  it("says so when the RPC answered ok but the agent is still archived or gone", async () => {
+    mocks.unarchive.mockResolvedValue({ ok: true, error: null });
+    const verify = vi.fn<(agentId: string) => Promise<boolean | null>>(async () => true);
+    const control = await mountUnarchive(verify);
+    await press(control, "parent");
+    expect(mocks.toastError).toHaveBeenLastCalledWith("Could not unarchive: The agent is still archived.");
+    verify.mockResolvedValueOnce(null);
+    await press(control, "parent");
+    expect(mocks.toastError).toHaveBeenLastCalledWith("Could not unarchive: The agent no longer exists.");
+  });
+
+  it("toasts the server's error, a rejected RPC and a failed read", async () => {
+    const verify = vi.fn<(agentId: string) => Promise<boolean | null>>(async () => false);
+    const control = await mountUnarchive(verify);
+    mocks.unarchive.mockResolvedValueOnce({ ok: false, error: "Paseo CLI exited with code 1." });
+    await press(control, "parent");
+    expect(mocks.toastError).toHaveBeenLastCalledWith("Could not unarchive: Paseo CLI exited with code 1.");
+    expect(verify).not.toHaveBeenCalled();
+    mocks.unarchive.mockRejectedValueOnce(new Error("socket closed"));
+    await press(control, "parent");
+    expect(mocks.toastError).toHaveBeenLastCalledWith("Could not unarchive: socket closed");
+    mocks.unarchive.mockResolvedValueOnce({ ok: true, error: null });
+    verify.mockRejectedValueOnce(new Error("agent fetch failed"));
+    await press(control, "parent");
+    expect(mocks.toastError).toHaveBeenLastCalledWith("Could not unarchive: agent fetch failed");
+  });
+});
+
+describe("Tasks archive control", () => {
+  let renderer: ReactTestRenderer | null = null;
+
+  beforeEach(() => {
+    mocks.toastError.mockReset();
+    mocks.language.mockReturnValue("en");
+  });
+
+  afterEach(async () => {
+    if (renderer) await act(async () => renderer?.unmount());
+    renderer = null;
+  });
+
+  async function mountArchive(archive: () => Promise<{ archivedAt: string }>) {
+    const ref = vi.fn(() => ({ archive }));
+    const paseo = { agents: { ref } } as unknown as Parameters<typeof useArchiveControl>[0]["paseo"];
+    let control: ArchiveControl | null = null;
+    function Probe() {
+      control = useArchiveControl({ paseo });
+      return null;
+    }
+    await act(async () => {
+      renderer = TestRenderer.create(React.createElement(Probe));
+    });
+    return { control: () => control!, ref };
+  }
+
+  it("archives through the host's client, pending until it answers", async () => {
+    let resolve: (value: { archivedAt: string }) => void = () => {};
+    const archive = vi.fn(() => new Promise<{ archivedAt: string }>((done) => (resolve = done)));
+    const { control, ref } = await mountArchive(archive);
+    await act(async () => {
+      control().press("done-1");
+      await Promise.resolve();
+    });
+    expect(ref).toHaveBeenCalledWith("done-1");
+    expect(control().pending("done-1")).toBe(true);
+    // A second press while it runs sends nothing.
+    await act(async () => control().press("done-1"));
+    expect(archive).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      resolve({ archivedAt: "2026-10-23T00:00:00.000Z" });
+      for (let index = 0; index < 4; index += 1) await Promise.resolve();
+    });
+    expect(control().pending("done-1")).toBe(false);
+    expect(mocks.toastError).not.toHaveBeenCalled();
+  });
+
+  it("toasts a failed archive", async () => {
+    mocks.language.mockReturnValue("zh");
+    const { control } = await mountArchive(() => Promise.reject(new Error("socket closed")));
+    await act(async () => {
+      control().press("done-1");
+      for (let index = 0; index < 6; index += 1) await Promise.resolve();
+    });
+    expect(mocks.toastError).toHaveBeenLastCalledWith("归档失败：socket closed");
+    expect(control().pending("done-1")).toBe(false);
+  });
+});
+
+describe("Tasks read control", () => {
+  let renderers: ReactTestRenderer[];
+  let control: ReadControl | undefined;
+  const readable = new Set<string>();
+  const onRead = vi.fn();
+
+  function ReadProbe() {
+    control = useReadControl({ isReadable: (agentId) => readable.has(agentId), onRead });
+    return React.createElement("probe");
+  }
+
+  const card = (id: string, isReadable = true) => ({ id, readable: isReadable }) as unknown as TaskCard;
+  const current = () => {
+    if (!control) throw new Error("Read control did not render");
+    return control;
+  };
+  const flush = async () => {
+    for (let i = 0; i < 4; i += 1) await Promise.resolve();
+  };
+
+  beforeEach(() => {
+    renderers = [];
+    control = undefined;
+    readable.clear();
+    onRead.mockReset();
+    mocks.capabilities.mockReset().mockResolvedValue({ stop: true, read: true });
+    mocks.read.mockReset().mockResolvedValue({ ok: true, error: null });
+    mocks.toastError.mockReset();
+    mocks.language.mockReturnValue("en");
+  });
+
+  afterEach(() => {
+    for (const renderer of renderers) act(() => renderer.unmount());
+    vi.useRealTimers();
+  });
+
+  async function mount() {
+    await act(async () => {
+      renderers.push(TestRenderer.create(React.createElement(ReadProbe)));
+      await flush();
+    });
+  }
+
+  it("is available only when the server says it reaches the daemon", async () => {
+    mocks.capabilities.mockResolvedValue({ stop: true });
+    await mount();
+    expect(current().available).toBe(false);
+    act(() => current().press(card("agent-a")));
+    expect(mocks.read).not.toHaveBeenCalled();
+  });
+
+  it("stays pending until the card leaves review, then is done without a toast", async () => {
+    readable.add("agent-a");
+    await mount();
+    expect(current().available).toBe(true);
+
+    await act(async () => {
+      current().press(card("agent-a"));
+      await flush();
+    });
+    expect(mocks.read).toHaveBeenCalledWith({ agentIds: ["agent-a"] });
+    // The board reads the marks again, so a failure the attention does not carry moves too.
+    expect(onRead).toHaveBeenCalledWith("agent-a");
+    expect(current().pending("agent-a")).toBe(true);
+    // A second press while it waits sends nothing.
+    act(() => current().press(card("agent-a")));
+    expect(mocks.read).toHaveBeenCalledTimes(1);
+
+    readable.delete("agent-a");
+    act(() => current().reconcile());
+    expect(current().pending("agent-a")).toBe(false);
+    expect(mocks.toastError).not.toHaveBeenCalled();
+  });
+
+  it("says so when the daemon accepted but the card is still in review", async () => {
+    vi.useFakeTimers();
+    readable.add("agent-a");
+    await mount();
+    await act(async () => {
+      current().press(card("agent-a"));
+      await flush();
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(READ_VERIFY_MS);
+    });
+    expect(current().pending("agent-a")).toBe(false);
+    expect(mocks.toastError).toHaveBeenCalledWith("Could not mark as read: the task is still to review.");
+  });
+
+  it("toasts the server's error and a rejected RPC, and ignores a card that is not readable", async () => {
+    readable.add("agent-a");
+    mocks.language.mockReturnValue("zh");
+    await mount();
+    act(() => current().press(card("agent-a", false)));
+    expect(mocks.read).not.toHaveBeenCalled();
+
+    mocks.read.mockResolvedValueOnce({ ok: false, error: "Could not reach the Paseo daemon." });
+    await act(async () => {
+      current().press(card("agent-a"));
+      await flush();
+    });
+    expect(mocks.toastError).toHaveBeenLastCalledWith("标为已读失败：Could not reach the Paseo daemon.");
+    expect(onRead).not.toHaveBeenCalled();
+    expect(current().pending("agent-a")).toBe(false);
+
+    mocks.read.mockRejectedValueOnce(new Error("socket closed"));
+    await act(async () => {
+      current().press(card("agent-a"));
+      await flush();
+    });
+    expect(mocks.toastError).toHaveBeenLastCalledWith("标为已读失败：socket closed");
+    expect(current().pending("agent-a")).toBe(false);
+  });
+});

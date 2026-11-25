@@ -1,0 +1,145 @@
+import { describe, expect, it } from "vitest";
+import { at, createFakePaseo, makeAgent, makeWorkspace } from "./helpers/fake-paseo";
+
+describe("fake PaseoApi", () => {
+  it("omits background workspaces and their agents unless explicitly included, on snapshots and live updates", async () => {
+    const hidden = makeWorkspace({ id: "hidden", background: true });
+    const agent = makeAgent({ id: "child", workspaceId: hidden.id, status: "running" });
+    const fake = createFakePaseo({ agents: [agent], workspaces: [hidden] });
+    expect((await fake.paseo.agents.list()).entries).toEqual([]);
+    expect((await fake.paseo.workspaces.list()).entries).toEqual([]);
+    expect((await fake.paseo.workspaces.list({ filter: { includeBackground: true } })).entries).toEqual([hidden]);
+    const defaultList = await fake.paseo.agents.list({ subscribe: {} });
+    const inclusiveList = await fake.paseo.agents.list({ filter: { includeBackground: true }, subscribe: {} });
+    const messages: unknown[] = [];
+    defaultList.subscription.subscribe({ snapshot() {}, update: (message) => messages.push(message) });
+    inclusiveList.subscription.subscribe({ snapshot() {}, update: (message) => messages.push(message) });
+    try {
+      expect(inclusiveList.entries.map(({ agent }) => agent.id)).toEqual(["child"]);
+      fake.upsertAgent({ ...agent, updatedAt: at(11) });
+      expect(messages).toEqual([
+        expect.objectContaining({ payload: expect.objectContaining({ kind: "remove", agentId: "child" }) }),
+        expect.objectContaining({ payload: expect.objectContaining({ kind: "upsert", agent: expect.objectContaining({ id: "child" }) }) }),
+      ]);
+    } finally {
+      await defaultList.subscription.release();
+      await inclusiveList.subscription.release();
+    }
+  });
+
+  it("answers a subscribed list only once its subscription is ready, with that snapshot, and rejects it when ready fails", async () => {
+    const fake = createFakePaseo({ agents: [makeAgent({ id: "a", status: "running" })], workspaces: [makeWorkspace({ id: "ws" })] });
+    const release = fake.holdReady();
+    let agentsAnswered = false;
+    let workspacesAnswered = false;
+    const agents = fake.paseo.agents.list({ subscribe: {} }).then((result) => { agentsAnswered = true; return result; });
+    const workspaces = fake.paseo.workspaces.list({ subscribe: {} }).then((result) => { workspacesAnswered = true; return result; });
+    for (let index = 0; index < 16; index += 1) await Promise.resolve();
+    expect([agentsAnswered, workspacesAnswered]).toEqual([false, false]);
+    release();
+    const [agentList, workspaceList] = await Promise.all([agents, workspaces]);
+    expect(await agentList.subscription.ready).toEqual(expect.objectContaining({ entries: agentList.entries }));
+    expect(workspaceList.entries.map((entry) => entry.id)).toEqual(["ws"]);
+    await agentList.subscription.release();
+    await workspaceList.subscription.release();
+    fake.failNextReady(() => true, "subscription failed");
+    await expect(fake.paseo.agents.list({ subscribe: {} })).rejects.toThrow("subscription failed");
+    expect(fake.openSubscriptions()).toBe(0);
+  });
+
+  it("filters, sorts and pages agents", async () => {
+    const fake = createFakePaseo({
+      agents: [
+        makeAgent({ id: "a", status: "idle", updatedAt: at(1) }),
+        makeAgent({ id: "b", status: "idle", updatedAt: at(3) }),
+        makeAgent({ id: "c", status: "running", updatedAt: at(2) }),
+        makeAgent({ id: "d", status: "idle", updatedAt: at(4), archivedAt: at(5) }),
+      ],
+    });
+    const first = await fake.paseo.agents.list({
+      filter: { statuses: ["idle", "closed"] },
+      sort: [{ key: "updated_at", direction: "desc" }],
+      page: { limit: 1 },
+    });
+    expect(first.entries.map((entry) => entry.agent.id)).toEqual(["b"]);
+    expect(first.pageInfo.hasMore).toBe(true);
+    const second = await fake.paseo.agents.list({
+      filter: { statuses: ["idle", "closed"] },
+      sort: [{ key: "updated_at", direction: "desc" }],
+      page: { limit: 1, cursor: first.pageInfo.nextCursor! },
+    });
+    expect(second.entries.map((entry) => entry.agent.id)).toEqual(["a"]);
+    expect(second.pageInfo.hasMore).toBe(false);
+  });
+
+  it("pushes an upsert while an agent matches and a remove for every non-match", async () => {
+    const fake = createFakePaseo({ agents: [makeAgent({ id: "a", status: "running" })] });
+    const result = await fake.paseo.agents.list({ filter: { statuses: ["running"] }, subscribe: {} });
+    const messages: unknown[] = [];
+    result.subscription.subscribe({ snapshot() {}, update: (message) => messages.push(message) });
+    fake.upsertAgent(makeAgent({ id: "b", status: "running" }));
+    fake.upsertAgent(makeAgent({ id: "a", status: "idle" }));
+    fake.upsertAgent(makeAgent({ id: "c", status: "idle" }));
+    expect(messages).toEqual([
+      expect.objectContaining({ type: "agent_update", payload: expect.objectContaining({ kind: "upsert", agent: expect.objectContaining({ id: "b" }) }) }),
+      expect.objectContaining({ type: "agent_update", payload: expect.objectContaining({ kind: "remove", agentId: "a" }) }),
+      expect.objectContaining({ type: "agent_update", payload: expect.objectContaining({ kind: "remove", agentId: "c" }) }),
+    ]);
+    await result.subscription.release();
+    expect(fake.openSubscriptions()).toBe(0);
+  });
+
+  it("replays a replacement snapshot after reconnect", async () => {
+    const fake = createFakePaseo({ agents: [makeAgent({ id: "a", status: "running" })] });
+    const result = await fake.paseo.agents.list({ filter: { statuses: ["running"] }, subscribe: {} });
+    const snapshots: unknown[] = [];
+    result.subscription.subscribe({ snapshot: (snapshot) => snapshots.push(snapshot), update() {} });
+    // As the SDK does, subscribing replays the snapshot `ready` resolves with, the very object.
+    expect(snapshots).toHaveLength(1);
+    expect(snapshots[0]).toBe(await result.subscription.ready);
+    fake.setAgentSilently(makeAgent({ id: "a", status: "idle" }));
+    fake.reconnectSubscriptions();
+    expect(snapshots).toHaveLength(2);
+    expect(snapshots[1]).toEqual(expect.objectContaining({ entries: [], pageInfo: expect.objectContaining({ hasMore: false }) }));
+    await result.subscription.release();
+  });
+
+  it("lists the agents of an archived workspace but not those whose workspace record is gone", async () => {
+    const fake = createFakePaseo({
+      agents: [makeAgent({ id: "kept", workspaceId: "ws-archived" }), makeAgent({ id: "orphan", workspaceId: "ws-gone" }), makeAgent({ id: "live", workspaceId: "ws" })],
+      workspaces: [makeWorkspace({ id: "ws" })],
+      archivedWorkspaceIds: ["ws-archived"],
+    });
+    const listed = await fake.paseo.agents.list({ filter: { includeBackground: true } });
+    expect(listed.entries.map((entry) => entry.agent.id).sort()).toEqual(["kept", "live"]);
+    const workspaces = await fake.paseo.workspaces.list({ filter: { includeBackground: true } });
+    expect(workspaces.entries.map((workspace) => workspace.id)).toEqual(["ws"]);
+  });
+
+  it("pages workspaces by key, so one archived after the first page does not shift the next", async () => {
+    const fake = createFakePaseo({
+      workspaces: ["w0", "w1", "w2", "w3"].map((id) => makeWorkspace({ id })),
+      workspacePageSize: 2,
+    });
+    const first = await fake.paseo.workspaces.list({ filter: { includeBackground: true } });
+    expect(first.entries.map((workspace) => workspace.id)).toEqual(["w0", "w1"]);
+    fake.removeWorkspace("w0");
+    const next = await fake.paseo.workspaces.list({ filter: { includeBackground: true }, page: { limit: 2, cursor: first.pageInfo.nextCursor! } });
+    expect(next.entries.map((workspace) => workspace.id)).toEqual(["w2", "w3"]);
+  });
+
+  it("offers label definitions and project icons only on new hosts", async () => {
+    const old = createFakePaseo();
+    expect("listLabels" in old.paseo.workspaces).toBe(false);
+    expect("icon" in old.paseo.projects).toBe(false);
+    const fresh = createFakePaseo({ withLabelsAndIcons: true, labels: [{ name: "bug", color: "red" }] });
+    const workspaces = fresh.paseo.workspaces as unknown as { listLabels(): Promise<{ labels: unknown[] }> };
+    expect((await workspaces.listLabels()).labels).toEqual([{ name: "bug", color: "red" }]);
+  });
+
+  it("records permission responses", async () => {
+    const fake = createFakePaseo({ agents: [makeAgent({ id: "a" })] });
+    await fake.paseo.agents.ref("a").respondToPermission({ requestId: "p1", response: { behavior: "allow" } });
+    expect(fake.permissionResponses).toEqual([{ agentId: "a", requestId: "p1", response: { behavior: "allow" } }]);
+  });
+});

@@ -1,0 +1,7 @@
+export { buildKernelEnv, CredentialMissingError, MemorySecretStore } from './bridge.ts'
+export type { BuildEnvOptions, BuildEnvResult, SecretStore } from './bridge.ts'
+export * from './vault.ts'
+export * from './diagnostics.ts'
+export * from './agent-routing.ts'
+export * from './auth-fallback.ts'
+export * from './routed-approval.ts'

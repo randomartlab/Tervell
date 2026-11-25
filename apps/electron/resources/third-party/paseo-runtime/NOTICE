@@ -1,0 +1,5 @@
+Paseo server runtime mechanisms, original client SDK and ConnectedHosts source. Apache-2.0.
+Original files are preserved at the paths and SHA-256 digests recorded in sources.json.
+Generated SDK bundles use a Tervell local driver for local operations, and original Paseo transport for connected hosts. Host operation projection and UI placements are maintained separately by Tervell.
+The outbound validation adapter uses the original Zod protocol schema instead of its generated AOT validator. Proxy selection is supplied by the Tervell environment adapter.
+ACP SDK 1.4.0 and connection dependencies retain their original licenses and npm integrity metadata.

@@ -1,0 +1,153 @@
+# Developing Better Paseo
+
+**English** | [简体中文](development-zh.md)
+
+[← Back to README](../README.md)
+
+## Project structure
+
+```text
+better-paseo/
+  paseo-plugin.json          # Manifest: id, Paseo requirement, build step
+  index.client.tsx           # Timeline transformers, renderers, settings screen
+  index.server.ts            # Daemon-side RPCs: file.reveal, file.image, highlight.tokens, fonts.embedded, marks.bitmaps
+  shared/
+    contracts.ts             # Data contracts shared by client and server
+    preferences-settings.ts  # The settings record (defineSettings, host scope) and its migrations
+    *-rpc.ts                 # One contract per RPC: file, image, highlight, font, mark, perf
+  server/
+    font-data.ts             # GENERATED subset woff2 faces (Inter), served by fonts.embedded
+    mark-bitmaps.ts          # GENERATED PNG rasters of every brand mark, served by marks.bitmaps
+  assets/tool-marks/         # Line sources of the tool-row marks (MCP services, shell programs)
+  scripts/build-tool-marks.mjs # Rasterises assets/tool-marks into server/mark-bitmaps.ts
+  client/
+    live-renderers.tsx       # Timeline item to component mapping
+    settings-page.tsx        # Settings screen; settings-preview.tsx draws its sample turn
+    preferences.ts           # Client-side presentation preferences
+    i18n/                    # English and Simplified Chinese strings for the settings page and toolbars
+    components/              # Cards, syntax block, Markdown, image viewer, find bar, theme tokens
+      marks.ts               # Brand mark ids, and the client cache marks.bitmaps fills
+      lobe-marks.ts          # Vendor SVG sources, read only by the generator
+    tools/ reasoning/ state/ # Tool summaries, reasoning parser, per-call expansion state
+  docs/perf/                 # Benchmark charts and the comparison page
+  docs/design.md             # Design notes: the icon family, mark format and how to add a mark
+  docs/plugin-registry-update.md # getpaseo/plugins pin pull request
+```
+
+## Commands
+
+```bash
+npm install
+npm run typecheck
+npm test
+npm run check:hermes
+npm run build:client
+paseo plugin reload better-paseo
+```
+
+Paseo installs the plugin from GitHub, so a change on a local branch is not what a client runs
+until it is pushed and the plugin is updated (`paseo plugin update better-paseo`).
+
+A day-to-day update may install the current `main` SHA. A version release does not. The version commit, the daily daemon, and the marketplace pin are the same SHA. Bump `package.json` first, push that commit, map its full hash in `versions.json`, then install that SHA:
+
+```bash
+paseo plugin update better-paseo --yes --ref <version sha> --json --home ~/.paseo
+```
+
+Do not install the parent of the version commit. That parent is not in the version map, so Settings reports the version information as incomplete and will not say which side is newer. Without `--ref`, the update installs whatever `main` is at that moment.
+
+The public listing on paseo.sh/plugins installs the commit pinned in
+getpaseo/plugins. Open that pin pull request for the same version SHA with
+[plugin-registry-update.md](plugin-registry-update.md). The same update
+publishes a GitHub release on RoundRedDot/better-paseo before the pull request
+is opened. The tag and the title are the same string, the plugin version, with
+no `v` prefix. The update is unfinished until that release exists and the
+daily daemon is on that SHA.
+
+## Install build
+
+The app downloads every plugin's client bundle again on each reconnect (inside
+the plugin catalog, decrypted in JS behind the relay), so its size shows as the
+"This plugin surface is unavailable." pause on a phone. The manifest's last
+build step, `node scripts/build-client.mjs --install`, runs on installs and
+updates from Git or npm (never for a directory source, and never on reload) and
+writes two files into the install:
+
+- `index.client.ts`, which Paseo takes before `index.client.tsx`: the bundle,
+  minified with the host's options and carried in a string the file evaluates
+  with `new Function`, so the host's own compile does not print it back out.
+- `server/tasks-chunk.ts`: the Tasks board's code (`client/tasks/chunk/entry.ts`),
+  left out of the bundle. The plugin server sends it when the board, its
+  sidebar entry or its settings first show (`tasksChunkRpc`), and the client
+  keeps its code on the JS global by build id, so a reconnect evaluates it
+  again without asking (`client/tasks/chunk/remote-chunk.ts`).
+
+Modules both halves need stay in the bundle and reach the chunk by id
+(`bc-tasks-shared`), so there is one enabled store, one board session and one
+language. In a checkout, in tests and for a directory install, `chunk/source.ts`
+imports the chunk directly and nothing is generated. `node scripts/build-client.mjs`
+prints the sizes; `--out <dir>` writes the files elsewhere. `--install` refuses
+to run outside Paseo's staging directory: an `index.client.ts` left in a
+checkout would shadow the source. To try an install build on a private daemon,
+commit, then `paseo --home <home> plugin install git:file://<checkout> --ref <full sha>`.
+
+## Hermes check
+
+On iOS and Android the client bundle runs on Hermes without Metro or Babel:
+the daemon bundles `index.client.tsx` with esbuild (target `es2020`, async
+functions lowered, nothing else), and the app evaluates the result as source.
+Code that works on web can still fail to load there, and when it fails the
+whole plugin is dropped, so web testing will not catch it.
+
+`npm run check:hermes` (`scripts/check-hermes.mjs`) bundles the client with
+the host's options and compiles it twice: with the Hermes V1 `hermesc` of the
+`react-native` devDependency (0.86, Paseo 0.13's), and with React Native
+0.81.5's legacy Hermes, which Paseo 0.12 still runs and which rejects code V1
+accepts, `class` among it. The legacy compiler and `hermes` VM come from
+`npm pack react-native@0.81.5` on the first run, cached in
+`~/.cache/better-paseo/`. Any error is mapped back to its source file and
+line. Hermes V1 publishes no VM, so the script then evaluates the bundle in
+the legacy `hermes` VM against stub modules, calls `contribute`, and checks
+the host's registration rules. Pass
+`--no-run` to compile only. `npm run check:hermes` then runs it again with
+`--built` on the install build: the minified bundle and the Tasks chunk each
+compile on their own, and the VM evaluates the chunk too. esbuild is a root devDependency, pinned to the
+same release vitest resolves, so the check does not hang on a transitive
+install.
+
+What must not reach client code, including client dependencies:
+
+- **No `class` in any form**: declarations, expressions, fields, private
+  members, or static blocks. Use closures and plain objects. This is why
+  `marked` cannot be imported on the client.
+- No regular-expression `v` flag (a compile error, so the check catches it).
+- No `Array.prototype.toSorted` and no `Intl.Segmenter`. Both are missing at
+  runtime rather than at compile time, so the check only catches them when
+  they run while the plugin loads. Code reached later, from a render, is not
+  covered.
+- No non-ASCII characters in the bundle. One stray `–` or `✓` makes Hermes keep
+  the whole ~950 KB source as two-byte text; the check rejects them.
+- Timeline renderers are registered as **plain functions**. Paseo checks
+  `typeof Component === "function"`, so the object `React.memo` returns is
+  rejected. Wrap a memoised body in a function component instead.
+
+`import()` compiles and loads, but it does not shorten startup. The host bundles
+one file without code splitting, so esbuild keeps the imported code in the
+bundle and wraps almost every module (207 of 246, measured) in a lazy
+initialiser. In the `hermes` VM on a Mac, with stub modules, running the
+bundle's module code took about 76 ms (median) with the settings page, the
+Tasks board and the find bar behind `import()`, against about 62 ms with
+static imports. Leaving those three out of the bundle took it to about 42 ms.
+Code only leaves the startup path when it leaves the bundle.
+
+## Media and benchmark production
+
+Video scripts, screenshot tooling, and media production assets are maintained separately in the private [better-paseo-media repository](https://github.com/RoundRedDot/better-paseo-media).
+The public README and gallery use final image assets hosted on this repository's GitHub Releases. Media assets and raw benchmark measurements are not stored in Git or included in a plugin checkout/install; raw benchmark runs are kept in local, git-ignored directories.
+Unit-test fixtures and pure test helpers stay under `test/`, so plugin tests do not require access to the private repository.
+
+## Plugin directory release information
+
+The Version tab uses the marketplace's reviewed Git commit as its target. It reads `versions.json` from `RoundRedDot/better-paseo-assets` for full Git hash, version and 12-digit build mappings. Release notes live in separate `changelogs/v<version>.json` files. Each file contains bilingual `versionNotes` snapshots keyed by build. Keep the earlier hash mappings and snapshots when adding a build with the same version; append its new user-visible changes to that version's existing notes. A new version starts with its own changes. Settings selects the newest snapshot at or before the marketplace build and shows up to three versions. A plugin update also publishes a same-named GitHub release before the registry pull request.
+
+For each release, set `package.json` `build` to the Singapore time in `YYYYMMDDHHmm` format before the version commit. After committing, map that exact commit hash to the same version and build in `versions.json`, and publish the JSON before the plugin commit is deployed. Deploy and pin that same hash. Do not deploy its parent and do not add the parent to the map in its place. Version comparison uses the three version components first and the build number only when they match. Two releases with the same version within one minute have the same build and cannot be ordered by this scheme. An installed hash missing from `versions.json` has no version, so Settings cannot tell whether the marketplace commit is newer.

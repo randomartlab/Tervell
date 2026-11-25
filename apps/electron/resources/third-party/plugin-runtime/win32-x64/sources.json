@@ -1,0 +1,8 @@
+{
+  "name": "Bun",
+  "version": "1.4.4",
+  "url": "https://github.com/oven-sh/bun/releases/download/bun-v1.4.4/bun-windows-x64.zip",
+  "retrieved": "2026-11-23",
+  "binarySha256": "cb1d8e6564e655e49d30cead359750a1cbbd12f42651caa4b62244d7bd93c244",
+  "archiveSha256": "cd2c0fccc78f3ede1f50ca827a15f063eda13d4d150a3d0674f4f6e323d864a5"
+}

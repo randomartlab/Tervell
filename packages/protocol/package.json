@@ -1,0 +1,29 @@
+{
+  "name": "@proma/protocol",
+  "version": "0.1.30",
+  "description": "跨包契约：会话/内核/凭据的 zod schema 与推导类型（I-05 唯一定义处）",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./auth": "./src/auth.ts",
+    "./kernel": "./src/kernel.ts",
+    "./session": "./src/session.ts",
+    "./events": "./src/events.ts",
+    "./plugin": "./src/plugin.ts",
+    "./api": "./src/api.ts",
+    "./permission": "./src/permission.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.9.0"
+  },
+  "types": "./generated/types/index.d.ts"
+}

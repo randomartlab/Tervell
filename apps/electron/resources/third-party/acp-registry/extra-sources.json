@@ -1,0 +1,35 @@
+{
+  "retrievedAt": "2026-11-24",
+  "sources": [
+    {
+      "id": "codewhale",
+      "url": "https://codewhale.net/en/install",
+      "package": "codewhale@0.10.4"
+    },
+    {
+      "id": "hoplite",
+      "url": "https://hoplite.sh/docs/cli",
+      "package": "@usehoplite/cli@3.5.2"
+    },
+    {
+      "id": "gjc",
+      "url": "https://gajae-code.com",
+      "package": "gajae-code@0.22.0"
+    },
+    {
+      "id": "dsh",
+      "url": "https://registry.npmjs.org/@deepseek-ai/dsh/latest",
+      "package": "@deepseek-ai/dsh@0.2.2-rc.5"
+    },
+    {
+      "id": "hermes",
+      "url": "https://pypi.org/pypi/hermes-agent/json",
+      "package": "hermes-agent==0.19.0"
+    },
+    {
+      "id": "fx",
+      "url": "https://fx.sh/docs/getting-started/installation",
+      "version": "v0.0.17"
+    }
+  ]
+}

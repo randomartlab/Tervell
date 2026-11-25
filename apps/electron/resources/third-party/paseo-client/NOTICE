@@ -1,0 +1,6 @@
+Paseo plugin SDK, client contribution evaluator timeline transform model and device-settings implementation.
+Source: https://github.com/getpaseo/paseo
+Commit: c2a24ae81e6f2f91abb84854c2046556355f780b
+Retrieved: 2026-11-22
+License: Apache-2.0; see Paseo-LICENSE.
+SDK source is preserved. Evaluator dependencies and output are adapted to the Tervell host; registrations, validation and teardown retain upstream behavior.

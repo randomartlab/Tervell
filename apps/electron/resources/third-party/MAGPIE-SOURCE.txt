@@ -1,0 +1,7 @@
+Magpie 0.1.4596-tervell.1
+MIT licensed, source: https://github.com/yetone/magpie
+Reference commit: f65fe92ef93557e9a2098d2606a4d9c0175a4213
+Upstream release: https://github.com/yetone/magpie-releases/releases/tag/v0.1.4596
+Tervell patch and reproducible build metadata: model-gateway-patches/
+Exact vendor reasoning levels are restored only for opted-in requests.
+Integrated as an isolated local service; original notices preserved.

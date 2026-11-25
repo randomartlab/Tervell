@@ -1,0 +1,252 @@
+{
+  "format": "proma-acp-trace",
+  "version": 1,
+  "kernelId": "omp",
+  "origin": "live",
+  "agentVersion": "omp/18.19.0",
+  "source": "isolated-home-loopback-model;prompt-only",
+  "frames": [
+    {
+      "seq": 1,
+      "direction": "client",
+      "message": {
+        "jsonrpc": "2.0",
+        "id": "id_ecbbc483e834f1a640f1",
+        "method": "initialize",
+        "params": {
+          "protocolVersion": 1,
+          "clientInfo": {
+            "name": "[text:75c31dfb452b8b1999ba]",
+            "version": "0.1"
+          },
+          "clientCapabilities": {
+            "session": {
+              "compaction": {}
+            }
+          }
+        }
+      }
+    },
+    {
+      "seq": 2,
+      "direction": "agent",
+      "message": {
+        "jsonrpc": "2.0",
+        "id": "id_ecbbc483e834f1a640f1",
+        "result": {
+          "protocolVersion": 1,
+          "agentInfo": {
+            "name": "[text:8123301357c9be7fb2d8]",
+            "title": "[text:8123301357c9be7fb2d8]",
+            "version": "18.19.0"
+          },
+          "authMethods": [
+            {
+              "id": "id_a9dd389a660ff9a07b22",
+              "name": "[text:09dfe7ae8d80bc5a0e30]",
+              "description": "[text:a5225cea43ef9bdd3a43]"
+            }
+          ],
+          "agentCapabilities": {
+            "loadSession": true,
+            "mcpCapabilities": {
+              "http": true,
+              "sse": true
+            },
+            "promptCapabilities": {
+              "embeddedContext": true,
+              "image": true
+            },
+            "sessionCapabilities": {
+              "key_3e60dd03d5f97e326c34": {},
+              "key_b74683c05844c9fc002c": {},
+              "key_bc2f757c509c23c56a02": {},
+              "key_506a4529a87b39843841": {}
+            }
+          },
+          "_meta": {
+            "steering": {
+              "supported": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "seq": 3,
+      "direction": "client",
+      "message": {
+        "jsonrpc": "2.0",
+        "id": "id_daba953efaa742d14c83",
+        "method": "session/new",
+        "params": {
+          "cwd": "[text:0edb03cc2f657e1669fb]",
+          "mcpServers": []
+        }
+      }
+    },
+    {
+      "seq": 4,
+      "direction": "agent",
+      "message": {
+        "jsonrpc": "2.0",
+        "id": "id_daba953efaa742d14c83",
+        "result": {
+          "sessionId": "id_cda14d7fa9a95aa206a6",
+          "configOptions": [
+            {
+              "id": "id_88a380a83826406cffff",
+              "name": "[text:e713edb4d87f15db74c0]",
+              "category": "mode",
+              "type": "select",
+              "currentValue": "id_df078e92148d54f8ee33",
+              "options": [
+                {
+                  "value": "id_df078e92148d54f8ee33",
+                  "name": "[text:1fa8a866d8003542701f]",
+                  "description": "[text:013afc6c84e50dea94ed]"
+                },
+                {
+                  "value": "id_86675f57cec16a9a5133",
+                  "name": "[text:4ed2eaebc6855b015697]",
+                  "description": "[text:1eb2da3868470a540b79]"
+                }
+              ]
+            },
+            {
+              "id": "id_eb01b187b4df563b3598",
+              "name": "[text:399c83c13ea8309a52a3]",
+              "category": "model",
+              "type": "select",
+              "currentValue": "id_77aecd784dd3445fd09c",
+              "options": [
+                {
+                  "value": "id_77aecd784dd3445fd09c",
+                  "name": "[text:e9747bb919be97a914b7]",
+                  "description": "[text:6ed994543f25429be5ce]"
+                }
+              ]
+            },
+            {
+              "id": "id_84400c6ff076f1b341c3",
+              "name": "[text:8638fb7fc11a2fd8792e]",
+              "category": "thought_level",
+              "type": "select",
+              "currentValue": "id_8b8e80c9e3aa292c6f9f",
+              "options": [
+                {
+                  "value": "id_8b8e80c9e3aa292c6f9f",
+                  "name": "[text:5bfbfca33e5a33bc72dd]"
+                },
+                {
+                  "value": "id_98c04c71cdbee849862f",
+                  "name": "[text:71407330537d324d1329]",
+                  "description": "[text:2efc07659dda254c1a4e]"
+                }
+              ]
+            }
+          ],
+          "key_29936082599e905da2cb": {
+            "key_9d6d766576461951100a": [
+              {
+                "id": "id_df078e92148d54f8ee33",
+                "name": "[text:1fa8a866d8003542701f]",
+                "description": "[text:013afc6c84e50dea94ed]"
+              },
+              {
+                "id": "id_86675f57cec16a9a5133",
+                "name": "[text:4ed2eaebc6855b015697]",
+                "description": "[text:1eb2da3868470a540b79]"
+              }
+            ],
+            "currentModeId": "[text:d9d11b75da689c08fa4e]"
+          }
+        }
+      }
+    },
+    {
+      "seq": 5,
+      "direction": "client",
+      "message": {
+        "jsonrpc": "2.0",
+        "id": "id_370d61aae5a3e8f7e1cb",
+        "method": "session/prompt",
+        "params": {
+          "sessionId": "id_cda14d7fa9a95aa206a6",
+          "prompt": [
+            {
+              "type": "text",
+              "text": "[text:284b8d8a72b6ec196151]"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "seq": 6,
+      "direction": "agent",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "session/update",
+        "params": {
+          "sessionId": "id_cda14d7fa9a95aa206a6",
+          "update": {
+            "sessionUpdate": "agent_message_chunk",
+            "content": {
+              "type": "text",
+              "text": "[text:077f07f3c210d75526ef]"
+            },
+            "messageId": "id_f3c72c310bd33ef2e57c"
+          }
+        }
+      }
+    },
+    {
+      "seq": 7,
+      "direction": "agent",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "session/update",
+        "params": {
+          "sessionId": "id_cda14d7fa9a95aa206a6",
+          "update": {
+            "sessionUpdate": "usage_update",
+            "size": 200000,
+            "used": 1
+          }
+        }
+      }
+    },
+    {
+      "seq": 8,
+      "direction": "agent",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "session/update",
+        "params": {
+          "sessionId": "id_cda14d7fa9a95aa206a6",
+          "update": {
+            "sessionUpdate": "session_info_update",
+            "updatedAt": "[text:60be36d46b7d99712e3f]"
+          }
+        }
+      }
+    },
+    {
+      "seq": 9,
+      "direction": "agent",
+      "message": {
+        "jsonrpc": "2.0",
+        "id": "id_370d61aae5a3e8f7e1cb",
+        "result": {
+          "stopReason": "end_turn",
+          "usage": {
+            "inputTokens": 1,
+            "outputTokens": 2,
+            "totalTokens": 3
+          }
+        }
+      }
+    }
+  ]
+}

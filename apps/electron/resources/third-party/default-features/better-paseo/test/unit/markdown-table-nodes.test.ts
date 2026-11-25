@@ -1,0 +1,175 @@
+/**
+ * What one table costs a native renderer: every host view it creates is a
+ * `createNode` and a slot in every `completeRoot` while the reply is on
+ * screen. A cell is one Text; the table's chrome is the scroller, the frame
+ * and the closed copy control.
+ */
+import { describe, expect, it, vi } from "vitest";
+import React from "react";
+
+vi.mock("react-native", () => import("./helpers/rn-mock"));
+vi.mock("@getpaseo/plugin/client/ui", async () => {
+  const rn = await import("./helpers/rn-mock");
+  return {
+    Icon: (props: Record<string, unknown>) => React.createElement("Icon", props),
+    TextInput: rn.TextInput,
+    ScrollView: rn.ScrollView,
+    Modal: rn.View,
+    copyText: () => Promise.resolve(true),
+    useToast: () => ({ show() {}, error() {}, success() {} }),
+  };
+});
+vi.mock("@getpaseo/plugin/client", () => ({
+  useAgent: () => undefined,
+  useWorkspace: () => undefined,
+  useRpc: () => () => Promise.resolve(null),
+  usePaseo: () => ({}),
+  useSettings: () => ({ data: undefined, status: "loading" }),
+}));
+
+const { countHostViews } = await import("./helpers/host-count");
+const { default: TestRenderer, act } = await import("react-test-renderer");
+const { buildThemeTokens } = await import("../../client/components/theme-tokens");
+const { MarkdownView } = await import("../../client/components/markdown/markdown-view");
+
+const tokens = buildThemeTokens({
+  surface0: "#ffffff", surface1: "#f6f6f7", surface2: "#ececee", border: "#e2e2e6",
+  foreground: "#1b1b1f", foregroundMuted: "#6b6b75", accent: "#3b6fe0",
+  accentForeground: "#ffffff", statusSuccess: "#1f8a5b", statusWarning: "#a36a00",
+  statusDanger: "#d23c3c",
+});
+
+/** Three columns, a header and five body rows: 18 cells. */
+const TABLE = [
+  "| Platform | Runtime | Notes |",
+  "| --- | --- | --- |",
+  "| Desktop | Electron | **Primary** target |",
+  "| Web | Vite | Same bundle |",
+  "| iOS | Hermes | [Expo](https://example.com) build |",
+  "| Android | Hermes | `adb` over USB |",
+  "| Relay | Cloud | n/a |",
+].join("\n");
+const CELLS = 18;
+
+const view = (text: string) => React.createElement(MarkdownView, { text, tokens, variant: "document" });
+
+/**
+ * The same table at 6a76c56, before the frame took the touches: a touch View
+ * around every cell, a wrapper around the scroller, a padding View inside it,
+ * and a corner View and a backing View around the copy control.
+ */
+const BEFORE = 55;
+
+describe("a native table's host views", () => {
+  for (const os of ["ios", "android"]) {
+    it(`${os}: one Text per cell and a fixed chrome`, () => {
+      const count = countHostViews(view(TABLE), os);
+      // The reply's root, the table's outer View, its scroller and frame, a
+      // View per row, a Text per cell, and the copy control's slot, button
+      // anchor, Pressable and icon.
+      expect(count.byType).toEqual({ View: 1 + 1 + 1 + 6 + 2, ScrollView: 1, Text: CELLS, Pressable: 1, Icon: 1 });
+      expect(count.views).toBe(32);
+      expect(count.views).toBeLessThan(BEFORE);
+    });
+  }
+
+  it("draws a cell as a Text straight in its row", () => {
+    (globalThis as { __rnMockOS?: string }).__rnMockOS = "android";
+    let renderer!: ReturnType<typeof TestRenderer.create>;
+    act(() => { renderer = TestRenderer.create(view(TABLE)); });
+    const cells = renderer.root.findAll((node) => String(node.type) === "Text"
+      && node.props.testID === "markdown-table-cell");
+    expect(cells).toHaveLength(CELLS);
+    for (const cell of cells) {
+      // The row's host View, through the mock's composite View.
+      const row = cell.parent!.parent!;
+      expect(String(row.type)).toBe("View");
+      expect(row.props.onTouchStart).toBeUndefined();
+      expect(row.props.style).toBeDefined();
+    }
+    act(() => renderer.unmount());
+    delete (globalThis as { __rnMockOS?: string }).__rnMockOS;
+  });
+
+  it("alternates body row backgrounds without changing the header", () => {
+    let renderer!: ReturnType<typeof TestRenderer.create>;
+    act(() => { renderer = TestRenderer.create(view(TABLE)); });
+    const cells = renderer.root.findAll((node) => String(node.type) === "Text"
+      && node.props.testID === "markdown-table-cell");
+    const backgrounds = Array.from({ length: 6 }, (_, row) =>
+      Object.assign({}, ...cells[row * 3]!.parent!.parent!.props.style.filter(Boolean)).backgroundColor);
+    expect(backgrounds[0]).toBeDefined();
+    expect(backgrounds.slice(1)).toEqual([undefined, "rgba(27, 27, 31, 0.04)", undefined, "rgba(27, 27, 31, 0.04)", undefined]);
+    act(() => renderer.unmount());
+  });
+
+  it("uses a visible alternate background in dark themes", () => {
+    const darkTokens = buildThemeTokens({
+      surface0: "#161616", surface1: "#202020", surface2: "#292929", border: "#383838",
+      foreground: "#eeeeee", foregroundMuted: "#aaaaaa", accent: "#7799ff",
+      accentForeground: "#ffffff", statusSuccess: "#1f8a5b", statusWarning: "#a36a00",
+      statusDanger: "#d23c3c",
+    });
+    let renderer!: ReturnType<typeof TestRenderer.create>;
+    act(() => { renderer = TestRenderer.create(React.createElement(MarkdownView, { text: TABLE, tokens: darkTokens, variant: "document" })); });
+    const cells = renderer.root.findAll((node) => String(node.type) === "Text"
+      && node.props.testID === "markdown-table-cell");
+    const rowStyle = cells[6]!.parent!.parent!.props.style;
+    expect(Object.assign({}, ...rowStyle.filter(Boolean)).backgroundColor).toBe("rgba(238, 238, 238, 0.045)");
+    act(() => renderer.unmount());
+  });
+
+  it.each([
+    ["light", tokens],
+    ["dark", buildThemeTokens({
+      surface0: "#161616", surface1: "#202020", surface2: "#292929", border: "#383838",
+      foreground: "#eeeeee", foregroundMuted: "#aaaaaa", accent: "#7799ff",
+      accentForeground: "#ffffff", statusSuccess: "#1f8a5b", statusWarning: "#a36a00",
+      statusDanger: "#d23c3c",
+    })],
+  ])("uses the theme foreground for the table header in %s mode", (_, theme) => {
+    let renderer!: ReturnType<typeof TestRenderer.create>;
+    act(() => { renderer = TestRenderer.create(React.createElement(MarkdownView, { text: TABLE, tokens: theme, variant: "document" })); });
+    const cells = renderer.root.findAll((node) => String(node.type) === "Text"
+      && node.props.testID === "markdown-table-cell");
+    expect(Object.assign({}, ...cells[0]!.props.style.filter(Boolean)).color).toBe(theme.foreground);
+    act(() => renderer.unmount());
+  });
+});
+
+it("keeps a resized web column through streaming updates and leaves other columns automatic", () => {
+  (globalThis as { __rnMockOS?: string }).__rnMockOS = "web";
+  const handles: { node: Map<string, (event: unknown) => void>; doc: Map<string, (event: unknown) => void> }[] = [];
+  const target = (map: Map<string, (event: unknown) => void>) => ({
+    addEventListener: (name: string, fn: (event: unknown) => void) => map.set(name, fn),
+    removeEventListener: (name: string) => map.delete(name),
+  });
+  const text = "| a | b |\n| --- | --- |\n| x | y |";
+  const streamingView = (value: string) => React.createElement(MarkdownView, { text: value, tokens, variant: "document", streaming: true });
+  let renderer!: ReturnType<typeof TestRenderer.create>;
+  act(() => { renderer = TestRenderer.create(streamingView(text), { createNodeMock: (element) => {
+    if ((element.props as { testID?: string }).testID !== "markdown-table-resize") return null;
+    const map = new Map<string, (event: unknown) => void>();
+    const doc = new Map<string, (event: unknown) => void>();
+    handles.push({ node: map, doc });
+    return { ...target(map), ownerDocument: target(doc) };
+  } }); });
+  const widths = () => renderer.root.findAll((node) => String(node.type) === "Text" && node.props.testID === "markdown-table-cell")
+    .map((node) => Object.assign({}, ...node.props.style.filter(Boolean)).width as number);
+  const before = widths();
+  const resizeHandles = renderer.root.findAll((node) => String(node.type) === "View" && node.props.testID === "markdown-table-resize");
+  expect(resizeHandles).toHaveLength(2);
+  const frame = renderer.root.findAll((node) => String(node.type) === "View" && node.props.testID === "markdown-table-frame")[0]!;
+  expect(frame.findAll((node) => String(node.type) === "View" && node.props.testID === "markdown-table-resize")).toHaveLength(2);
+  expect(resizeHandles[0]!.props.style).toMatchObject({ top: 0, bottom: 0 });
+  expect(resizeHandles.every((handle) => handle.children.length === 0)).toBe(true);
+  const event = (x: number) => ({ pointerType: "mouse", pointerId: 1, button: 0, clientX: x, preventDefault() {}, stopPropagation() {} });
+  act(() => { handles[0]!.node.get("pointerdown")!(event(100)); handles[0]!.doc.get("pointermove")!(event(160)); handles[0]!.doc.get("pointerup")!(event(160)); });
+  expect(widths()).toEqual([before[0]! + 60, before[1], before[2]! + 60, before[3]]);
+  act(() => renderer.update(streamingView(`${text}\n| more | a much longer value that widens the second column |\n`)));
+  const after = widths();
+  expect(after[0]).toBe(before[0]! + 60);
+  expect(after[1]).toBeGreaterThan(before[1]!);
+  act(() => renderer.unmount());
+  delete (globalThis as { __rnMockOS?: string }).__rnMockOS;
+});

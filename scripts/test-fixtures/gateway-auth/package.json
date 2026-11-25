@@ -1,0 +1,8 @@
+{
+ "name":"tervell-synthetic-auth",
+ "version":"1.0.0",
+ "private":true,
+ "type":"module",
+ "main":"index.js",
+ "magpie":{"name":"合成账号授权插件","icon":"openai","options":{"label":"本机回环验收"},"page":{"title":"授权插件验收页","file":"page.html"},"permissions":["providers:list"]}
+}

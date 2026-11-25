@@ -1,0 +1,432 @@
+{
+  "format": "proma-acp-trace",
+  "version": 1,
+  "kernelId": "opencode-1",
+  "origin": "scripted",
+  "agentVersion": "scripted-1",
+  "source": "dialect-server:source-shaped-scripted;not-vendor-recording",
+  "frames": [
+    {
+      "seq": 1,
+      "direction": "client",
+      "message": {
+        "jsonrpc": "2.0",
+        "id": "id_cf00b3d47c6a5b37d56d",
+        "method": "initialize",
+        "params": {
+          "protocolVersion": 1,
+          "clientInfo": {
+            "name": "[text:d6815bf3566f7767a251]",
+            "version": "0.1"
+          },
+          "clientCapabilities": {
+            "session": {
+              "compaction": {}
+            }
+          }
+        }
+      }
+    },
+    {
+      "seq": 2,
+      "direction": "agent",
+      "message": {
+        "jsonrpc": "2.0",
+        "id": "id_cf00b3d47c6a5b37d56d",
+        "result": {
+          "protocolVersion": 1,
+          "agentInfo": {
+            "name": "[text:fd10fee5e83187f119bc]",
+            "version": "[enum:a9aac315b55ba6e574ad]"
+          },
+          "agentCapabilities": {}
+        }
+      }
+    },
+    {
+      "seq": 3,
+      "direction": "client",
+      "message": {
+        "jsonrpc": "2.0",
+        "id": "id_cb8fdb1c2b07e4af49e6",
+        "method": "session/new",
+        "params": {
+          "cwd": "[text:5e0db61b8cab4fcec6e1]",
+          "mcpServers": []
+        }
+      }
+    },
+    {
+      "seq": 4,
+      "direction": "agent",
+      "message": {
+        "jsonrpc": "2.0",
+        "id": "id_cb8fdb1c2b07e4af49e6",
+        "result": {
+          "sessionId": "id_9d3efa65b6a34405fb05",
+          "configOptions": [
+            {
+              "id": "id_a508b50836885ea29d85",
+              "name": "[text:ab6b281905b068d40408]",
+              "category": "model",
+              "type": "select",
+              "currentValue": "id_4812f4f204cce33eec77",
+              "options": [
+                {
+                  "value": "id_4812f4f204cce33eec77",
+                  "name": "[text:6e3fe4db06594d4a3686]"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "seq": 5,
+      "direction": "client",
+      "message": {
+        "jsonrpc": "2.0",
+        "id": "id_b3ee31f551ae9b5fd40c",
+        "method": "session/prompt",
+        "params": {
+          "sessionId": "id_9d3efa65b6a34405fb05",
+          "prompt": [
+            {
+              "type": "text",
+              "text": "[text:ef0e90de6ab20f00c7a3]"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "seq": 6,
+      "direction": "agent",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "session/update",
+        "params": {
+          "sessionId": "id_9d3efa65b6a34405fb05",
+          "update": {
+            "sessionUpdate": "agent_message_chunk",
+            "messageId": "id_8af8ec27b390b0300a4d",
+            "content": {
+              "type": "text",
+              "text": "[text:ca6f8e646f23365d7cbe]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "seq": 7,
+      "direction": "agent",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "session/update",
+        "params": {
+          "sessionId": "id_9d3efa65b6a34405fb05",
+          "update": {
+            "sessionUpdate": "tool_call",
+            "toolCallId": "id_ff2fc41a07c0e028151b",
+            "title": "[text:5daa0c40f5734538b8b0]",
+            "name": "[text:5daa0c40f5734538b8b0]",
+            "kind": "read",
+            "status": "pending",
+            "rawInput": {
+              "path": "[text:c0a472641cf9c6067687]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "seq": 8,
+      "direction": "agent",
+      "message": {
+        "jsonrpc": "2.0",
+        "id": "id_cf00b3d47c6a5b37d56d",
+        "method": "session/request_permission",
+        "params": {
+          "sessionId": "id_9d3efa65b6a34405fb05",
+          "toolCall": {
+            "toolCallId": "id_ff2fc41a07c0e028151b",
+            "title": "[text:5daa0c40f5734538b8b0]",
+            "kind": "read"
+          },
+          "options": [
+            {
+              "optionId": "id_c525923e59cc3b006433",
+              "name": "[text:b4f9e188e37b7128cd24]",
+              "kind": "allow_once"
+            },
+            {
+              "optionId": "id_4a31e618277ab5dbe07d",
+              "name": "[text:e5d37d59a750d7be14df]",
+              "kind": "reject_once"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "seq": 9,
+      "direction": "client",
+      "message": {
+        "jsonrpc": "2.0",
+        "id": "id_cf00b3d47c6a5b37d56d",
+        "result": {
+          "outcome": {
+            "outcome": "selected",
+            "optionId": "id_c525923e59cc3b006433"
+          }
+        }
+      }
+    },
+    {
+      "seq": 10,
+      "direction": "agent",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "session/update",
+        "params": {
+          "sessionId": "id_9d3efa65b6a34405fb05",
+          "update": {
+            "sessionUpdate": "tool_call_update",
+            "toolCallId": "id_ff2fc41a07c0e028151b",
+            "status": "completed",
+            "rawOutput": {
+              "output": "[text:23e6c532f0493b630db7]",
+              "metadata": {
+                "exit": "[NUMBER]"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "seq": 11,
+      "direction": "agent",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "session/update",
+        "params": {
+          "sessionId": "id_9d3efa65b6a34405fb05",
+          "update": {
+            "sessionUpdate": "tool_call",
+            "toolCallId": "id_ad6079cc1cc8737c629d",
+            "title": "[text:563313b828becd1b7a3b]",
+            "name": "[text:563313b828becd1b7a3b]",
+            "kind": "edit",
+            "status": "pending",
+            "rawInput": {
+              "path": "[text:c0a472641cf9c6067687]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "seq": 12,
+      "direction": "agent",
+      "message": {
+        "jsonrpc": "2.0",
+        "id": "id_cb8fdb1c2b07e4af49e6",
+        "method": "session/request_permission",
+        "params": {
+          "sessionId": "id_9d3efa65b6a34405fb05",
+          "toolCall": {
+            "toolCallId": "id_ad6079cc1cc8737c629d",
+            "title": "[text:563313b828becd1b7a3b]",
+            "kind": "edit"
+          },
+          "options": [
+            {
+              "optionId": "id_c525923e59cc3b006433",
+              "name": "[text:b4f9e188e37b7128cd24]",
+              "kind": "allow_once"
+            },
+            {
+              "optionId": "id_4a31e618277ab5dbe07d",
+              "name": "[text:e5d37d59a750d7be14df]",
+              "kind": "reject_once"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "seq": 13,
+      "direction": "client",
+      "message": {
+        "jsonrpc": "2.0",
+        "id": "id_cb8fdb1c2b07e4af49e6",
+        "result": {
+          "outcome": {
+            "outcome": "selected",
+            "optionId": "id_c525923e59cc3b006433"
+          }
+        }
+      }
+    },
+    {
+      "seq": 14,
+      "direction": "agent",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "session/update",
+        "params": {
+          "sessionId": "id_9d3efa65b6a34405fb05",
+          "update": {
+            "sessionUpdate": "tool_call_update",
+            "toolCallId": "id_ad6079cc1cc8737c629d",
+            "status": "completed",
+            "rawOutput": {
+              "output": "[text:23e6c532f0493b630db7]",
+              "metadata": {
+                "exit": "[NUMBER]"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "seq": 15,
+      "direction": "agent",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "session/update",
+        "params": {
+          "sessionId": "id_9d3efa65b6a34405fb05",
+          "update": {
+            "sessionUpdate": "tool_call",
+            "toolCallId": "id_15d2361e5114517d2d25",
+            "title": "[text:483577565076b3c1035c]",
+            "name": "[text:483577565076b3c1035c]",
+            "kind": "execute",
+            "status": "pending",
+            "rawInput": {
+              "path": "[text:c0a472641cf9c6067687]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "seq": 16,
+      "direction": "agent",
+      "message": {
+        "jsonrpc": "2.0",
+        "id": "id_b3ee31f551ae9b5fd40c",
+        "method": "session/request_permission",
+        "params": {
+          "sessionId": "id_9d3efa65b6a34405fb05",
+          "toolCall": {
+            "toolCallId": "id_15d2361e5114517d2d25",
+            "title": "[text:483577565076b3c1035c]",
+            "kind": "execute"
+          },
+          "options": [
+            {
+              "optionId": "id_c525923e59cc3b006433",
+              "name": "[text:b4f9e188e37b7128cd24]",
+              "kind": "allow_once"
+            },
+            {
+              "optionId": "id_4a31e618277ab5dbe07d",
+              "name": "[text:e5d37d59a750d7be14df]",
+              "kind": "reject_once"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "seq": 17,
+      "direction": "client",
+      "message": {
+        "jsonrpc": "2.0",
+        "id": "id_b3ee31f551ae9b5fd40c",
+        "result": {
+          "outcome": {
+            "outcome": "selected",
+            "optionId": "id_c525923e59cc3b006433"
+          }
+        }
+      }
+    },
+    {
+      "seq": 18,
+      "direction": "agent",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "session/update",
+        "params": {
+          "sessionId": "id_9d3efa65b6a34405fb05",
+          "update": {
+            "sessionUpdate": "tool_call_update",
+            "toolCallId": "id_15d2361e5114517d2d25",
+            "status": "completed",
+            "rawOutput": {
+              "output": "[text:23e6c532f0493b630db7]",
+              "metadata": {
+                "exit": "[NUMBER]"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "seq": 19,
+      "direction": "agent",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "session/update",
+        "params": {
+          "sessionId": "id_9d3efa65b6a34405fb05",
+          "update": {
+            "sessionUpdate": "plan",
+            "entries": [
+              {
+                "content": "[text:c4305c77952d27746198]",
+                "priority": "high",
+                "status": "completed"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "seq": 20,
+      "direction": "agent",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "session/update",
+        "params": {
+          "sessionId": "id_9d3efa65b6a34405fb05",
+          "update": {
+            "sessionUpdate": "usage_update",
+            "used": 5,
+            "size": 100
+          }
+        }
+      }
+    },
+    {
+      "seq": 21,
+      "direction": "agent",
+      "message": {
+        "jsonrpc": "2.0",
+        "id": "id_b3ee31f551ae9b5fd40c",
+        "result": {
+          "stopReason": "end_turn"
+        }
+      }
+    }
+  ]
+}

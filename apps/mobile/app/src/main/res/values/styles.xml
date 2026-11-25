@@ -1,0 +1,11 @@
+<resources>
+    <style name="PromaTheme.Foundation" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:colorAccent">@color/brand_accent</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:statusBarColor">#FFFFFF</item>
+        <item name="android:navigationBarColor">#121212</item>
+    </style>
+    <style name="PromaTheme.Base" parent="PromaTheme.Foundation" />
+    <style name="PromaTheme" parent="PromaTheme.Base" />
+</resources>

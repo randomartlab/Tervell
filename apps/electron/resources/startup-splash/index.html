@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tervell</title>
+    <link rel="stylesheet" href="surfaces.css" />
+    <style>
+      * { box-sizing: border-box; }
+      html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+      body {
+        background: var(--tervell-brand-mineral);
+        color: var(--tervell-brand-paper);
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Segoe UI", sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="tervell-splash" aria-busy="true">
+      <div class="tervell-splash-content">
+        <img class="tervell-splash-mark" src="tervell-reverse.svg" alt="" width="88" height="88" />
+        <h1 class="tervell-splash-name">Tervell</h1>
+        <p class="tervell-splash-slogan">Make room for meaningful work.</p>
+        <div class="tervell-splash-progress" aria-hidden="true"></div>
+        <p class="tervell-splash-status" role="status">正在启动 Tervell</p>
+      </div>
+      <p class="tervell-splash-footer">PERSONAL AGENT WORKSPACE</p>
+    </main>
+  </body>
+</html>

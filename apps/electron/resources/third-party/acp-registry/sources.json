@@ -1,0 +1,30 @@
+[
+  {
+    "file": "registry.json",
+    "url": "https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json",
+    "sha256": "502a2b1c3af4fe61e86a4d65c70cc5d8154116f3b3c1b370ccea778804ede877",
+    "date": "2026-11-24",
+    "bytes": 75831
+  },
+  {
+    "file": "FORMAT.md",
+    "url": "https://raw.githubusercontent.com/agentclientprotocol/registry/main/FORMAT.md",
+    "sha256": "88a9cf2fa3bd8ddbedc8f34aad8a166aac4ca6576f579455660d7c7b28ffbf53",
+    "date": "2026-11-24",
+    "bytes": 7380
+  },
+  {
+    "file": "AUTHENTICATION.md",
+    "url": "https://raw.githubusercontent.com/agentclientprotocol/registry/main/AUTHENTICATION.md",
+    "sha256": "59972bbb22c119cf9a9d08dc5afcf9c50ac04598cf5f519a5949b5a1a76479a2",
+    "date": "2026-11-24",
+    "bytes": 3593
+  },
+  {
+    "file": "codex-acp-README.md",
+    "url": "https://raw.githubusercontent.com/zed-industries/codex-acp/main/README.md",
+    "sha256": "b1662b9a8303aece9c9b9377d16382458ffdb0bfd77910a3f477f6ce9817540f",
+    "date": "2026-11-24",
+    "bytes": 1774
+  }
+]

@@ -1,0 +1,74 @@
+@import '../brand/palette.css';
+
+:root {
+  color-scheme: light;
+  --ui-scale: 1;
+  --font-ui: calc(.875rem * var(--ui-scale));
+  --font-small: calc(.75rem * var(--ui-scale));
+  --font-title: calc(1.125rem * var(--ui-scale));
+  --body-size: 1rem;
+  --code-size: .8125rem;
+  --sidebar-width: 248px;
+  --panel-width: 344px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --radius-control: 6px;
+  --radius-input: 10px;
+  --radius-dialog: 12px;
+  --row-padding: 10px;
+  --block-gap: 24px;
+  --motion-control: 140ms;
+  --motion-panel: 180ms;
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f7f8f7;
+  --surface-3: #eff0ee;
+  --sidebar: #fafaf9;
+  --fg: #18181b;
+  --fg-2: #3f3f46;
+  --fg-muted: #60685f;
+  --border: #e9e9e6;
+  --border-2: #7e897f;
+  --primary: var(--tervell-brand-light-primary);
+  --primary-fg: var(--tervell-brand-light-foreground);
+  --primary-soft: var(--tervell-brand-light-soft);
+  --warn: #96631a;
+  --warn-soft: #fdf6ea;
+  --danger: #a83c33;
+  --danger-soft: #fbeeec;
+  --info: #2b6a92;
+  --violet: #6b5aa8;
+  --overlay: #18181b66;
+  --dialog-shadow: 0 20px 80px #18181b26;
+  --focus: var(--tervell-brand-light-primary);
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #171a18;
+  --surface: #1d211e;
+  --surface-2: #252a26;
+  --surface-3: #303631;
+  --sidebar: #1b1f1c;
+  --fg: #edf0eb;
+  --fg-2: #d2d9d1;
+  --fg-muted: #a3afa3;
+  --border: #303731;
+  --border-2: #738273;
+  --primary: var(--tervell-brand-dark-primary);
+  --primary-fg: var(--tervell-brand-dark-foreground);
+  --primary-soft: var(--tervell-brand-dark-soft);
+  --warn: #e7be7c;
+  --warn-soft: #3b3021;
+  --danger: #f3a399;
+  --danger-soft: #402825;
+  --info: #91c6e5;
+  --violet: #c4b6ed;
+  --overlay: #090d0bb3;
+  --dialog-shadow: 0 20px 80px #00000066;
+  --focus: var(--tervell-brand-dark-primary);
+}
+
+:root[data-density="compact"] { --row-padding: 6px; --block-gap: 16px; }

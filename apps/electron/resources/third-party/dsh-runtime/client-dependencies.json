@@ -1,0 +1,34 @@
+[
+  {
+    "name": "anser",
+    "version": "2.3.5",
+    "url": "https://registry.npmjs.org/anser/-/anser-2.3.5.tgz",
+    "integrity": "sha512-vcZjxvvVoxTeR5XBNJB38oTu/7eDCZlwdz32N1eNgpyPF7j/Z7Idf+CUwQOkKKpJ7RJyjxgLHCM7vdIK0iCNMQ==",
+    "license": "MIT",
+    "sourceLock": "DeepSeek Harness 39163dd30f703a79079e2d2446545cff3c453738 pnpm-lock.yaml"
+  },
+  {
+    "name": "immer",
+    "version": "10.2.0",
+    "url": "https://registry.npmjs.org/immer/-/immer-10.2.0.tgz",
+    "integrity": "sha512-d/+XTN3zfODyjr89gM3mPq1WNX2B8pYsu7eORitdwyA2sBubnTl3laYlBk4sXY5FUa5qTZGBDPJICVbvqzjlbw==",
+    "license": "MIT",
+    "sourceLock": "DeepSeek Harness 39163dd30f703a79079e2d2446545cff3c453738 pnpm-lock.yaml"
+  },
+  {
+    "name": "simple-icons",
+    "version": "16.31.0",
+    "url": "https://registry.npmjs.org/simple-icons/-/simple-icons-16.31.0.tgz",
+    "integrity": "sha512-dDEqvQrmxL7ZnqQtGHGjCNW6CfiwzAif+83Hol9JXAnAB6wh2zsZD7Sc1kWT0O/RRAKt7xfG8W6UZhYBPD+GAA==",
+    "license": "CC0-1.0",
+    "sourceLock": "DeepSeek Harness 39163dd30f703a79079e2d2446545cff3c453738 pnpm-lock.yaml"
+  },
+  {
+    "name": "zustand",
+    "version": "4.5.7",
+    "url": "https://registry.npmjs.org/zustand/-/zustand-4.5.7.tgz",
+    "integrity": "sha512-CHOUy7mu3lbD6o6LJLfllpjkzhHXSBlX8B9+qPddUsIfeF5S/UZ5q0kmCsnRqT1UHFQZchNFDDzMbQsuesHWlw==",
+    "license": "MIT",
+    "sourceLock": "DeepSeek Harness 39163dd30f703a79079e2d2446545cff3c453738 pnpm-lock.yaml"
+  }
+]

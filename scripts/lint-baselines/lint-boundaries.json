@@ -1,0 +1,10 @@
+{
+  "apps/electron/src/main/lib/adapters/pi-builtin-tools.ts": 1,
+  "apps/electron/src/main/lib/agent-orchestrator.ts": 1,
+  "apps/electron/src/main/lib/channel-manager.ts": 1,
+  "apps/electron/src/main/lib/feishu/sleep-blocker.ts": 1,
+  "apps/electron/src/renderer/components/onboarding/OnboardingView.tsx": 1,
+  "apps/electron/src/renderer/components/settings/AppearanceSettings.tsx": 1,
+  "apps/electron/src/renderer/components/settings/VoiceInputSettings.tsx": 1,
+  "apps/electron/src/renderer/components/voice-dictation/VoiceDictationApp.tsx": 1
+}

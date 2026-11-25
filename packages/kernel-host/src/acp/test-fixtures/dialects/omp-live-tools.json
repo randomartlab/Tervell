@@ -1,0 +1,1481 @@
+{
+  "format": "proma-acp-trace",
+  "version": 1,
+  "kernelId": "omp",
+  "origin": "live",
+  "agentVersion": "omp/18.19.0",
+  "source": "isolated-home-loopback-model;read-edit-bash",
+  "frames": [
+    {
+      "seq": 1,
+      "direction": "client",
+      "message": {
+        "jsonrpc": "2.0",
+        "id": "id_2b0a6dcef3ba879031a1",
+        "method": "initialize",
+        "params": {
+          "protocolVersion": 1,
+          "clientInfo": {
+            "name": "[text:b1c1e1888d29cb0c35f0]",
+            "version": "0.1"
+          },
+          "clientCapabilities": {
+            "session": {
+              "compaction": {}
+            }
+          }
+        }
+      }
+    },
+    {
+      "seq": 2,
+      "direction": "agent",
+      "message": {
+        "jsonrpc": "2.0",
+        "id": "id_2b0a6dcef3ba879031a1",
+        "result": {
+          "protocolVersion": 1,
+          "agentInfo": {
+            "name": "[text:5f988b6d4e7480e4cde5]",
+            "title": "[text:5f988b6d4e7480e4cde5]",
+            "version": "18.19.0"
+          },
+          "authMethods": [
+            {
+              "id": "id_7c6e0fd397cf07bb7f37",
+              "name": "[text:5699d2b2eeb4ca217ccb]",
+              "description": "[text:8a0b39d38cdd1727e26b]"
+            }
+          ],
+          "agentCapabilities": {
+            "loadSession": true,
+            "mcpCapabilities": {
+              "http": true,
+              "sse": true
+            },
+            "promptCapabilities": {
+              "embeddedContext": true,
+              "image": true
+            },
+            "sessionCapabilities": {
+              "key_5bd4abe642bb3170e3e2": {},
+              "key_439a0a8b1ce3f64c59fb": {},
+              "key_0681af370e174a9c3bd4": {},
+              "key_f73a553821b1d8fb28e6": {}
+            }
+          },
+          "_meta": {
+            "steering": {
+              "supported": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "seq": 3,
+      "direction": "client",
+      "message": {
+        "jsonrpc": "2.0",
+        "id": "id_4e40695f6b3cde0a0263",
+        "method": "session/new",
+        "params": {
+          "cwd": "[text:4c444f00931804c5efba]",
+          "mcpServers": []
+        }
+      }
+    },
+    {
+      "seq": 4,
+      "direction": "agent",
+      "message": {
+        "jsonrpc": "2.0",
+        "id": "id_4e40695f6b3cde0a0263",
+        "result": {
+          "sessionId": "id_99cd65a6eceea89ab452",
+          "configOptions": [
+            {
+              "id": "id_58e198a038fbdfc4c308",
+              "name": "[text:d3ee3d4d5b8838944acb]",
+              "category": "mode",
+              "type": "select",
+              "currentValue": "id_86914e55f5be46855099",
+              "options": [
+                {
+                  "value": "id_86914e55f5be46855099",
+                  "name": "[text:2a42805baa41d0894f3f]",
+                  "description": "[text:2a7cecbbdab4c1d50e11]"
+                },
+                {
+                  "value": "id_59b9fe88fbf3e9b4e951",
+                  "name": "[text:d949d7f1b672e8525451]",
+                  "description": "[text:23f1e48a1f8f2bf0b177]"
+                }
+              ]
+            },
+            {
+              "id": "id_1c11ef1db0987331d1d5",
+              "name": "[text:f19d3ee02d81d1c3be4c]",
+              "category": "model",
+              "type": "select",
+              "currentValue": "id_c3e837a0b00c65b638c5",
+              "options": [
+                {
+                  "value": "id_c3e837a0b00c65b638c5",
+                  "name": "[text:311883fd13b0240b0f1f]",
+                  "description": "[text:019619e01bd3cc403b69]"
+                }
+              ]
+            },
+            {
+              "id": "id_61735b35f4637bb845a4",
+              "name": "[text:082150464b828c814fae]",
+              "category": "thought_level",
+              "type": "select",
+              "currentValue": "id_48241a2b481a44765d6a",
+              "options": [
+                {
+                  "value": "id_48241a2b481a44765d6a",
+                  "name": "[text:b0aa0f23c747a80a26b8]"
+                },
+                {
+                  "value": "id_afc364794e6579004f37",
+                  "name": "[text:789a5b42c99701feb52d]",
+                  "description": "[text:a11311e5513eff4083f1]"
+                }
+              ]
+            }
+          ],
+          "key_d9ec23657ef055914296": {
+            "key_d815d6ceff796025c82f": [
+              {
+                "id": "id_86914e55f5be46855099",
+                "name": "[text:2a42805baa41d0894f3f]",
+                "description": "[text:2a7cecbbdab4c1d50e11]"
+              },
+              {
+                "id": "id_59b9fe88fbf3e9b4e951",
+                "name": "[text:d949d7f1b672e8525451]",
+                "description": "[text:23f1e48a1f8f2bf0b177]"
+              }
+            ],
+            "currentModeId": "[text:3a8325cf1fea5aa287a8]"
+          }
+        }
+      }
+    },
+    {
+      "seq": 5,
+      "direction": "client",
+      "message": {
+        "jsonrpc": "2.0",
+        "id": "id_f3d61c06ada66519653f",
+        "method": "session/prompt",
+        "params": {
+          "sessionId": "id_99cd65a6eceea89ab452",
+          "prompt": [
+            {
+              "type": "text",
+              "text": "[text:d80e2005b3a3572f4619]"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "seq": 6,
+      "direction": "agent",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "session/update",
+        "params": {
+          "sessionId": "id_99cd65a6eceea89ab452",
+          "update": {
+            "sessionUpdate": "tool_call",
+            "toolCallId": "id_c4819efa42a7eb24ea81",
+            "name": "[text:655d8024f98f482b0e64]",
+            "title": "[text:cf38dbe91b4d36dce7b0]",
+            "kind": "read",
+            "status": "pending",
+            "rawInput": {
+              "path": "[text:8cad77d764841041f02e]"
+            },
+            "locations": [
+              {
+                "path": "[text:15ff1e4848fc396cb366]"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "seq": 7,
+      "direction": "agent",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "session/update",
+        "params": {
+          "sessionId": "id_99cd65a6eceea89ab452",
+          "update": {
+            "sessionUpdate": "tool_call_update",
+            "toolCallId": "id_c4819efa42a7eb24ea81",
+            "status": "completed",
+            "rawOutput": {
+              "content": [
+                {
+                  "type": "text",
+                  "text": "[text:6d3e28c74a52d4733242]"
+                }
+              ],
+              "details": {
+                "key_693ce4528c43ab08ebad": "[NUMBER]",
+                "key_64c624d8521903ea7559": "[PRIVATE]",
+                "key_d46829fdfcce17cb8142": {
+                  "text": "[text:8b8fce07093b4c4e85f3]",
+                  "key_637435ec5d5d03e79a3d": "[NUMBER]",
+                  "key_28dee3f4bae5da7e0b50": [
+                    "[NUMBER]"
+                  ]
+                },
+                "key_d7a062674d8fde2aa28c": "[NUMBER]",
+                "key_df453ce9e1f758b7e3fc": {
+                  "key_71d80dff2523d954dcef": {
+                    "type": "[text:3d4b57d6102e1d0a1e55]",
+                    "key_ff6201d004b5df97c5e2": "[text:15ff1e4848fc396cb366]"
+                  },
+                  "key_418324f4651cd92451db": "[PRIVATE]"
+                }
+              }
+            },
+            "content": [
+              {
+                "type": "content",
+                "content": {
+                  "type": "text",
+                  "text": "[text:6d3e28c74a52d4733242]"
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "seq": 8,
+      "direction": "agent",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "session/update",
+        "params": {
+          "sessionId": "id_99cd65a6eceea89ab452",
+          "update": {
+            "sessionUpdate": "tool_call",
+            "toolCallId": "id_a2b174bec67afe436540",
+            "name": "[text:199a336a6a64ed8ca40a]",
+            "title": "[text:4afcbaf8d9320a95099e]",
+            "kind": "edit",
+            "status": "pending",
+            "rawInput": {
+              "input": "[text:08c7d4ae2f53986fc966]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "seq": 9,
+      "direction": "agent",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "session/update",
+        "params": {
+          "sessionId": "id_99cd65a6eceea89ab452",
+          "update": {
+            "sessionUpdate": "tool_call_update",
+            "toolCallId": "id_a2b174bec67afe436540",
+            "status": "completed",
+            "rawOutput": {
+              "content": [
+                {
+                  "type": "text",
+                  "text": "[text:8ad87b2e48da865bfc86]"
+                }
+              ],
+              "details": {
+                "key_0da3dbdbb642c53872b5": "[text:3063c9f95d4ca4089439]",
+                "key_eca109efd180de28958e": "[NUMBER]",
+                "key_8025513613c19e51f919": "[text:6fb9e4ce198d800fceb9]",
+                "path": "[text:15ff1e4848fc396cb366]",
+                "key_1d0266813348efba6dc9": "[text:654438268252158b0a77]",
+                "key_bd275b3ef36180d7763c": "[text:80c9b2f59cca139fbad0]"
+              }
+            },
+            "content": [
+              {
+                "type": "diff",
+                "path": "[text:15ff1e4848fc396cb366]",
+                "oldText": "[text:654438268252158b0a77]",
+                "newText": "[text:80c9b2f59cca139fbad0]"
+              },
+              {
+                "type": "content",
+                "content": {
+                  "type": "text",
+                  "text": "[text:8ad87b2e48da865bfc86]"
+                }
+              }
+            ],
+            "locations": [
+              {
+                "path": "[text:15ff1e4848fc396cb366]"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "seq": 10,
+      "direction": "agent",
+      "message": {
+        "jsonrpc": "2.0",
+        "id": "id_360f523faea634a88b67",
+        "method": "session/request_permission",
+        "params": {
+          "sessionId": "id_99cd65a6eceea89ab452",
+          "toolCall": {
+            "toolCallId": "id_1478bd41f8555cba03be",
+            "title": "[text:d2f00cedb657110dce2f]",
+            "kind": "execute",
+            "status": "pending",
+            "rawInput": {
+              "command": "[text:d2f00cedb657110dce2f]",
+              "key_4ef051755347289ffacc": "[PRIVATE]"
+            },
+            "content": [
+              {
+                "type": "content",
+                "content": {
+                  "type": "text",
+                  "text": "[text:62439ee664c4a21008c6]"
+                }
+              }
+            ],
+            "locations": []
+          },
+          "options": [
+            {
+              "optionId": "id_0f9a1f1c15c88133a117",
+              "name": "[text:3dadf0b2e0cc784a816a]",
+              "kind": "allow_once"
+            },
+            {
+              "optionId": "id_f2e917d22b2fdf6c9ba1",
+              "name": "[text:b0cb519b67c31457f796]",
+              "kind": "allow_always"
+            },
+            {
+              "optionId": "id_64bf990c7c0e44728244",
+              "name": "[text:ee3edda98919e8b69299]",
+              "kind": "reject_once"
+            },
+            {
+              "optionId": "id_dd2f67529ecab92cd590",
+              "name": "[text:7941ca47e2c3501248bd]",
+              "kind": "reject_always"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "seq": 11,
+      "direction": "client",
+      "message": {
+        "jsonrpc": "2.0",
+        "id": "id_360f523faea634a88b67",
+        "result": {
+          "outcome": {
+            "outcome": "selected",
+            "optionId": "id_0f9a1f1c15c88133a117"
+          }
+        }
+      }
+    },
+    {
+      "seq": 12,
+      "direction": "agent",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "session/update",
+        "params": {
+          "sessionId": "id_99cd65a6eceea89ab452",
+          "update": {
+            "sessionUpdate": "tool_call",
+            "toolCallId": "id_1478bd41f8555cba03be",
+            "name": "[text:df1e58bfbb6f4111a957]",
+            "title": "[text:62439ee664c4a21008c6]",
+            "kind": "execute",
+            "status": "pending",
+            "rawInput": {
+              "command": "[text:d2f00cedb657110dce2f]",
+              "key_4ef051755347289ffacc": "[PRIVATE]"
+            },
+            "content": [
+              {
+                "type": "content",
+                "content": {
+                  "type": "text",
+                  "text": "[text:62439ee664c4a21008c6]"
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "seq": 13,
+      "direction": "agent",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "session/update",
+        "params": {
+          "sessionId": "id_99cd65a6eceea89ab452",
+          "update": {
+            "sessionUpdate": "available_commands_update",
+            "availableCommands": [
+              {
+                "name": "[text:6ca4a64ba13ab85494fc]",
+                "description": "[text:236d234308c0d6739a32]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:93d3611dc22dc80eb38a]"
+                }
+              },
+              {
+                "name": "[text:0dbda492e57141b001c0]",
+                "description": "[text:76bbfec8ba7c3720770a]"
+              },
+              {
+                "name": "[text:3678f5b0575978eb8d28]",
+                "description": "[text:325a74144cf1919ab017]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:8b6f2906fa3d45830b65]"
+                }
+              },
+              {
+                "name": "[text:6e1ca8429c37e58d6909]",
+                "description": "[text:f90afb690e0a3c266ad9]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:caebf429a6bba1f524b9]"
+                }
+              },
+              {
+                "name": "[text:aebf1e98b302faa52152]",
+                "description": "[text:5e075817855a9b9954b7]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:d06d3d6da55b9dfa6411]"
+                }
+              },
+              {
+                "name": "[text:ba98cf00ff7c3e885093]",
+                "description": "[text:52642705830e708dfd1e]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:d06d3d6da55b9dfa6411]"
+                }
+              },
+              {
+                "name": "[text:fe7de37c213d53bfb3eb]",
+                "description": "[text:340cf7697cc474ff122a]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:d06d3d6da55b9dfa6411]"
+                }
+              },
+              {
+                "name": "[text:c15502af16557a260d11]",
+                "description": "[text:24dfcaffa72022a39ee5]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:d06d3d6da55b9dfa6411]"
+                }
+              },
+              {
+                "name": "[text:5588e4662d1c99abb670]",
+                "description": "[text:8225406a163e4d91103a]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:0fe0cf11b614cae791c7]"
+                }
+              },
+              {
+                "name": "[text:f7efa7c7d079779c4dfd]",
+                "description": "[text:fba70e5ae83083eb0b37]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:0803c220c5ee41655228]"
+                }
+              },
+              {
+                "name": "[text:45ade82391c29c0d2a9b]",
+                "description": "[text:5c7263cd614b669a7113]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:a6d875f652ee6f660246]"
+                }
+              },
+              {
+                "name": "[text:b89764dd4c274e845dcf]",
+                "description": "[text:49363ea2a817b21aaaf8]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:5b6b6605bf462e013b64]"
+                }
+              },
+              {
+                "name": "[text:a826e4d8117e054fc526]",
+                "description": "[text:7b7bc65874a8585e0fd8]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:db56b7df89515d6673c3]"
+                }
+              },
+              {
+                "name": "[text:19ecd7592ddc007f73ce]",
+                "description": "[text:c3805eaec998fa9db5f5]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:e8a62aa600b2e498c971]"
+                }
+              },
+              {
+                "name": "[text:6f67b046125bf3b4ceeb]",
+                "description": "[text:4efa1b61c6b37ef4582a]"
+              },
+              {
+                "name": "[text:d234f74c240587dc07c6]",
+                "description": "[text:042f837a8658a41049a1]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:921fbe153e92586c9002]"
+                }
+              },
+              {
+                "name": "[text:66b004f1cb3b13e846c1]",
+                "description": "[text:09b11ede8528809838de]"
+              },
+              {
+                "name": "[text:9df2613985a6718176b1]",
+                "description": "[text:516a64ac12dc19a45e9e]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:611e09dba43f2cc4fb6d]"
+                }
+              },
+              {
+                "name": "[text:ec1ba1854c0feea9ab49]",
+                "description": "[text:4248e8e17f5841053313]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:c419f61d13f79cd7ef0a]"
+                }
+              },
+              {
+                "name": "[text:1db7273b1be8194ef194]",
+                "description": "[text:b7288c64018404cfb996]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:f88fbd269af041a28b47]"
+                }
+              },
+              {
+                "name": "[text:ce84b73ee5d3dd6ed598]",
+                "description": "[text:7ebf7dd5ba7dbdd6475b]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:f748b096b92f35904c5f]"
+                }
+              },
+              {
+                "name": "[text:86c2798b078d596d4c51]",
+                "description": "[text:a0bac0bd0c9a355301bf]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:ef9b5434e8248791c4a7]"
+                }
+              },
+              {
+                "name": "[text:1669d0fad5b1a6d6d831]",
+                "description": "[text:01c875afa832b15139a6]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:d7b813ed0221fe579528]"
+                }
+              },
+              {
+                "name": "[text:ab360a89e7f199d9586f]",
+                "description": "[text:7a92a3d0a6d1efa99d5c]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:fdff95685b31f9be97c1]"
+                }
+              },
+              {
+                "name": "[text:85fe9d2bc1d2b0926624]",
+                "description": "[text:f40ccd9bd4e4cd89bd7e]"
+              },
+              {
+                "name": "[text:fd62d1eac4952a5eef57]",
+                "description": "[text:fdde08d23a7541bd10c6]"
+              },
+              {
+                "name": "[text:5620b804096db4760d56]",
+                "description": "[text:58872b032a61ff43400c]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:c419f61d13f79cd7ef0a]"
+                }
+              },
+              {
+                "name": "[text:e24ef7b1cfe0eb4f2a95]",
+                "description": "[text:b41be407f6e9ba935a50]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:c419f61d13f79cd7ef0a]"
+                }
+              },
+              {
+                "name": "[text:9afd679759fd1e156628]",
+                "description": "[text:f26475f5ec17617b7250]"
+              },
+              {
+                "name": "[text:1520f20275e88e9efad9]",
+                "description": "[text:1d2f4f59365d8609049b]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:61897db5cf8b0a9b8e73]"
+                }
+              },
+              {
+                "name": "[text:71c45b44eec8e9799807]",
+                "description": "[text:7ff54f33acfa8fd7342b]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:8297ab471ee6a8053384]"
+                }
+              },
+              {
+                "name": "[text:cba67c90691e35c4e6d4]",
+                "description": "[text:92db10b5c6fb01c556a4]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:4d51c47fc7ece4867ec5]"
+                }
+              },
+              {
+                "name": "[text:88c7014cc265176046a5]",
+                "description": "[text:c4651c8b5391d9da0c0a]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:99841a18ec47dec75dbf]"
+                }
+              },
+              {
+                "name": "[text:366fabbb4f17ab6c27c9]",
+                "description": "[text:6f2d1edaaeccda7128e1]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:99841a18ec47dec75dbf]"
+                }
+              },
+              {
+                "name": "[text:d81d943ed9ed4d6f3654]",
+                "description": "[text:1299cec1afbf0b6e6401]"
+              },
+              {
+                "name": "[text:9d7b7cb3590d8f2b8539]",
+                "description": "[text:1c5094e7fc17f6cd9a50]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:c419f61d13f79cd7ef0a]"
+                }
+              },
+              {
+                "name": "[text:851795a93559b1fc9e28]",
+                "description": "[text:6484ef2cf086b3a2a8b2]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:863fcc4eb0a600e0ce10]"
+                }
+              },
+              {
+                "name": "[text:e1c32de2bd485399b739]",
+                "description": "[text:58856d02f965250482fe]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:708494854082ff3903ec]"
+                }
+              },
+              {
+                "name": "[text:4505e2318d83418d1262]",
+                "description": "[text:2fcbae641330fd43b5bb]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:99c632d3cf587f2d4ad7]"
+                }
+              },
+              {
+                "name": "[text:d2e78a2faa3df3690215]",
+                "description": "[text:0d397012fc0a7b39030d]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:56e9118e97cdf5ea2abe]"
+                }
+              },
+              {
+                "name": "[text:01a85da25028fb3e020b]",
+                "description": "[text:4f931500d0445f4e19d5]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:56e9118e97cdf5ea2abe]"
+                }
+              },
+              {
+                "name": "[text:7518fceab38e217cb1b2]",
+                "description": "[text:aa326202a8148677ca16]"
+              },
+              {
+                "name": "[text:0e4e8820a6d67dd2f676]",
+                "description": "[text:a1395af7ba1738a872e4]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:c419f61d13f79cd7ef0a]"
+                }
+              },
+              {
+                "name": "[text:5dd5bd06ac155b058121]",
+                "description": "[text:9c833ec5d5ae9072f6e4]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:80d2d3b1cb2a9c773556]"
+                }
+              },
+              {
+                "name": "[text:60da28fe0be0872b165b]",
+                "description": "[text:5ad296495ce15b154c54]"
+              },
+              {
+                "name": "[text:fffe699d80b72229d3bb]",
+                "description": "[text:d96d8a8ae802b78b2ea1]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:ebab1472d0bd8872d889]"
+                }
+              },
+              {
+                "name": "[text:f3bc2ee1d5462e836ffd]",
+                "description": "[text:3a9511b3a811a145dae3]"
+              },
+              {
+                "name": "[text:56d592d3c33c473b8a74]",
+                "description": "[text:0deb1786bcbe8c063fa9]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:41f593b847c2d4b32899]"
+                }
+              },
+              {
+                "name": "[text:3dcae9ef4f336769f2bc]",
+                "description": "[text:9ef893e8f0ad839bf84e]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:41f593b847c2d4b32899]"
+                }
+              },
+              {
+                "name": "[text:224ffbb7767b7206e5c1]",
+                "description": "[text:c79555d9188219362989]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:41f593b847c2d4b32899]"
+                }
+              },
+              {
+                "name": "[text:afb4e291bc0f4edcbe6d]",
+                "description": "[text:1489ebc5dc6d7093108a]",
+                "input": {
+                  "key_4d2dfa8193224d9cb8ae": "[text:41f593b847c2d4b32899]"
+                }
+              },
+              {
+                "name": "[text:4c7e1aaad21745e10eb7]",
+                "description": "[text:b3ebe329eb060ee15a14]"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "seq": 14,
+      "direction": "agent",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "session/update",
+        "params": {
+          "sessionId": "id_99cd65a6eceea89ab452",
+          "update": {
+            "sessionUpdate": "session_info_update",
+            "updatedAt": "[text:407db97f69a6f4457524]"
+          }
+        }
+      }
+    },
+    {
+      "seq": 15,
+      "direction": "agent",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "session/update",
+        "params": {
+          "sessionId": "id_99cd65a6eceea89ab452",
+          "update": {
+            "sessionUpdate": "tool_call_update",
+            "toolCallId": "id_1478bd41f8555cba03be",
+            "status": "in_progress",
+            "rawOutput": {
+              "content": [
+                {
+                  "type": "text",
+                  "text": "[text:93317cde807e565ddc85]"
+                }
+              ],
+              "details": {}
+            },
+            "content": [
+              {
+                "type": "content",
+                "content": {
+                  "type": "text",
+                  "text": "[text:62439ee664c4a21008c6]"
+                }
+              },
+              {
+                "type": "content",
+                "content": {
+                  "type": "text",
+                  "text": "[text:93317cde807e565ddc85]"
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "seq": 16,
+      "direction": "agent",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "session/update",
+        "params": {
+          "sessionId": "id_99cd65a6eceea89ab452",
+          "update": {
+            "sessionUpdate": "tool_call_update",
+            "toolCallId": "id_1478bd41f8555cba03be",
+            "status": "in_progress",
+            "rawOutput": {
+              "content": [
+                {
+                  "type": "text",
+                  "text": "[text:93317cde807e565ddc85]"
+                }
+              ],
+              "details": {
+                "key_6f67b046125bf3b4ceeb": {
+                  "key_d0f1f5e55102bef0da03": "[NUMBER]",
+                  "key_4ebbabd4cbbd68504fa4": "[PRIVATE]",
+                  "key_59ac639cb918ee387767": "[NUMBER]",
+                  "key_953263c55e92fc067728": "[NUMBER]",
+                  "key_2e616a96f9f26ecf27bd": "[NUMBER]",
+                  "key_a9f4f66289dd73c4c660": "[text:d2f00cedb657110dce2f]",
+                  "key_2d5bd32f6f5f76e7eb6f": [
+                    {
+                      "key_ee4859afa6bd805c4aea": "[NUMBER]",
+                      "key_a8406075e865b7208c37": "[NUMBER]",
+                      "key_a1c2957b6ef0d785a93e": "[NUMBER]",
+                      "key_9aaf31b4f9e4c43e80a4": [
+                        {
+                          "key_e9846eb749eb9663572b": "[text:3d371de3bab3f2047601]",
+                          "key_3df043864b7469fa53ef": "[NUMBER]",
+                          "key_2251ec68a07909ed8e79": "[NUMBER]",
+                          "key_8776e780015536a96571": "[text:da36e5af16290b4a3410]"
+                        },
+                        {
+                          "key_e9846eb749eb9663572b": "[text:ecf63f72e01d89f3f47f]",
+                          "key_3df043864b7469fa53ef": "[NUMBER]",
+                          "key_2251ec68a07909ed8e79": "[NUMBER]",
+                          "key_cc038aa9a13d736ea332": "[NUMBER]",
+                          "key_8776e780015536a96571": "[text:da36e5af16290b4a3410]"
+                        },
+                        {
+                          "key_e9846eb749eb9663572b": "[text:38f2e8c5af97a0200aef]",
+                          "key_3df043864b7469fa53ef": "[NUMBER]",
+                          "key_2251ec68a07909ed8e79": "[NUMBER]",
+                          "key_cc038aa9a13d736ea332": "[NUMBER]",
+                          "key_8776e780015536a96571": "[text:da36e5af16290b4a3410]",
+                          "key_93c54f493a8c04d7cd28": "[NUMBER]",
+                          "key_b805deda63c4e3864e90": "[NUMBER]",
+                          "key_130f2eeb067e45164a0c": "[NUMBER]",
+                          "key_ee4859afa6bd805c4aea": "[NUMBER]",
+                          "key_9a82a5340362807a7330": [
+                            "[text:4187859d047d4f6041f3]",
+                            "[text:93317cde807e565ddc85]"
+                          ],
+                          "key_c160fee5df3b00a6cf43": "[text:bd01dc03e172a7879100]",
+                          "key_cfc989a8552f0791190e": "[NUMBER]",
+                          "key_4c6c4da62c2b96926d7d": "[NUMBER]"
+                        },
+                        {
+                          "key_e9846eb749eb9663572b": "[text:5cbf080f1a19ce56beee]",
+                          "key_3df043864b7469fa53ef": "[NUMBER]",
+                          "key_2251ec68a07909ed8e79": "[NUMBER]",
+                          "key_cc038aa9a13d736ea332": "[NUMBER]",
+                          "key_8776e780015536a96571": "[text:f674a6b5e72164ccdb86]"
+                        },
+                        {
+                          "key_e9846eb749eb9663572b": "[text:5cbf080f1a19ce56beee]",
+                          "key_3df043864b7469fa53ef": "[NUMBER]",
+                          "key_2251ec68a07909ed8e79": "[NUMBER]",
+                          "key_cc038aa9a13d736ea332": "[NUMBER]",
+                          "key_8776e780015536a96571": "[text:f674a6b5e72164ccdb86]"
+                        }
+                      ],
+                      "key_9674f40d2e1a3d08dcbf": "[text:bd97c6ad93ab2b990596]"
+                    }
+                  ],
+                  "key_07b389f5b1713a3285e6": [
+                    {
+                      "key_4ebbabd4cbbd68504fa4": "[PRIVATE]",
+                      "key_2e616a96f9f26ecf27bd": "[NUMBER]",
+                      "key_46bc55888ce82a8acba5": "[NUMBER]",
+                      "key_16f13c20fe7e9ee722bb": "[NUMBER]",
+                      "key_ba6004ba6552bcbf9bd3": "[text:72978aa741e1d302bb69]"
+                    },
+                    {
+                      "key_4ebbabd4cbbd68504fa4": "[PRIVATE]",
+                      "key_2e616a96f9f26ecf27bd": "[NUMBER]",
+                      "key_46bc55888ce82a8acba5": "[NUMBER]",
+                      "key_8a7319a181a1121325d4": "[NUMBER]",
+                      "key_940c827166b21424da9f": "[NUMBER]",
+                      "command": {
+                        "key_6f1dfcd4e2f408172676": "[NUMBER]",
+                        "key_16f13c20fe7e9ee722bb": "[NUMBER]",
+                        "key_4ebbabd4cbbd68504fa4": "[PRIVATE]"
+                      },
+                      "key_16f13c20fe7e9ee722bb": "[NUMBER]",
+                      "key_ba6004ba6552bcbf9bd3": "[text:94737545727a43c34c5f]"
+                    },
+                    {
+                      "key_4ebbabd4cbbd68504fa4": "[PRIVATE]",
+                      "key_2e616a96f9f26ecf27bd": "[NUMBER]",
+                      "key_46bc55888ce82a8acba5": "[NUMBER]",
+                      "key_8a7319a181a1121325d4": "[NUMBER]",
+                      "key_940c827166b21424da9f": "[NUMBER]",
+                      "command": {
+                        "key_6f1dfcd4e2f408172676": "[NUMBER]",
+                        "key_16f13c20fe7e9ee722bb": "[NUMBER]",
+                        "key_4ebbabd4cbbd68504fa4": "[PRIVATE]"
+                      },
+                      "key_16f13c20fe7e9ee722bb": "[NUMBER]",
+                      "key_ba6004ba6552bcbf9bd3": "[text:b4814bb67bf24e484ca7]",
+                      "key_9a82a5340362807a7330": [
+                        "[text:4187859d047d4f6041f3]",
+                        "[text:93317cde807e565ddc85]"
+                      ],
+                      "key_05c7dd9ccc1cc8e0a8b7": [],
+                      "key_702bfc4c25863344d7bd": "[text:bd01dc03e172a7879100]",
+                      "key_3382a5e526fee622187e": []
+                    },
+                    {
+                      "key_4ebbabd4cbbd68504fa4": "[PRIVATE]",
+                      "key_2e616a96f9f26ecf27bd": "[NUMBER]",
+                      "key_8a7319a181a1121325d4": "[NUMBER]",
+                      "key_940c827166b21424da9f": "[NUMBER]",
+                      "command": {
+                        "key_6f1dfcd4e2f408172676": "[NUMBER]",
+                        "key_16f13c20fe7e9ee722bb": "[NUMBER]",
+                        "key_4ebbabd4cbbd68504fa4": "[PRIVATE]"
+                      },
+                      "key_16f13c20fe7e9ee722bb": "[NUMBER]",
+                      "key_ba6004ba6552bcbf9bd3": "[text:20fbfc9c364003594ca7]",
+                      "text": "[text:93317cde807e565ddc85]",
+                      "key_8b6f70380650924fe0e0": "[NUMBER]"
+                    },
+                    {
+                      "key_4ebbabd4cbbd68504fa4": "[PRIVATE]",
+                      "key_2e616a96f9f26ecf27bd": "[NUMBER]",
+                      "key_46bc55888ce82a8acba5": "[NUMBER]",
+                      "key_8a7319a181a1121325d4": "[NUMBER]",
+                      "key_940c827166b21424da9f": "[NUMBER]",
+                      "command": {
+                        "key_6f1dfcd4e2f408172676": "[NUMBER]",
+                        "key_16f13c20fe7e9ee722bb": "[NUMBER]",
+                        "key_4ebbabd4cbbd68504fa4": "[PRIVATE]"
+                      },
+                      "key_16f13c20fe7e9ee722bb": "[NUMBER]",
+                      "key_ba6004ba6552bcbf9bd3": "[text:ef16abf128e86224da2e]",
+                      "key_59ac639cb918ee387767": "[NUMBER]",
+                      "key_f2309eaa31248d8fa571": "[NUMBER]",
+                      "key_3aa0050c4411fc3c5d18": []
+                    },
+                    {
+                      "key_4ebbabd4cbbd68504fa4": "[PRIVATE]",
+                      "key_2e616a96f9f26ecf27bd": "[NUMBER]",
+                      "key_46bc55888ce82a8acba5": "[NUMBER]",
+                      "key_16f13c20fe7e9ee722bb": "[NUMBER]",
+                      "key_ba6004ba6552bcbf9bd3": "[text:23f08dc97d2cd8f9b8d7]",
+                      "key_59ac639cb918ee387767": "[NUMBER]"
+                    }
+                  ]
+                }
+              }
+            },
+            "content": [
+              {
+                "type": "content",
+                "content": {
+                  "type": "text",
+                  "text": "[text:62439ee664c4a21008c6]"
+                }
+              },
+              {
+                "type": "content",
+                "content": {
+                  "type": "text",
+                  "text": "[text:93317cde807e565ddc85]"
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "seq": 17,
+      "direction": "agent",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "session/update",
+        "params": {
+          "sessionId": "id_99cd65a6eceea89ab452",
+          "update": {
+            "sessionUpdate": "tool_call_update",
+            "toolCallId": "id_1478bd41f8555cba03be",
+            "status": "in_progress",
+            "rawOutput": {
+              "content": [
+                {
+                  "type": "text",
+                  "text": "[text:93317cde807e565ddc85]"
+                }
+              ],
+              "details": {
+                "key_05179f481c7785fb9747": "[PRIVATE]",
+                "key_83dce0563c93f74458d1": "[NUMBER]",
+                "wallTimeMs": "[PRIVATE]",
+                "key_6f67b046125bf3b4ceeb": {
+                  "key_d0f1f5e55102bef0da03": "[NUMBER]",
+                  "key_4ebbabd4cbbd68504fa4": "[PRIVATE]",
+                  "key_59ac639cb918ee387767": "[NUMBER]",
+                  "key_953263c55e92fc067728": "[NUMBER]",
+                  "key_2e616a96f9f26ecf27bd": "[NUMBER]",
+                  "key_a9f4f66289dd73c4c660": "[text:d2f00cedb657110dce2f]",
+                  "key_2d5bd32f6f5f76e7eb6f": [
+                    {
+                      "key_ee4859afa6bd805c4aea": "[NUMBER]",
+                      "key_a8406075e865b7208c37": "[NUMBER]",
+                      "key_a1c2957b6ef0d785a93e": "[NUMBER]",
+                      "key_9aaf31b4f9e4c43e80a4": [
+                        {
+                          "key_e9846eb749eb9663572b": "[text:3d371de3bab3f2047601]",
+                          "key_3df043864b7469fa53ef": "[NUMBER]",
+                          "key_2251ec68a07909ed8e79": "[NUMBER]",
+                          "key_8776e780015536a96571": "[text:da36e5af16290b4a3410]"
+                        },
+                        {
+                          "key_e9846eb749eb9663572b": "[text:ecf63f72e01d89f3f47f]",
+                          "key_3df043864b7469fa53ef": "[NUMBER]",
+                          "key_2251ec68a07909ed8e79": "[NUMBER]",
+                          "key_cc038aa9a13d736ea332": "[NUMBER]",
+                          "key_8776e780015536a96571": "[text:da36e5af16290b4a3410]"
+                        },
+                        {
+                          "key_e9846eb749eb9663572b": "[text:38f2e8c5af97a0200aef]",
+                          "key_3df043864b7469fa53ef": "[NUMBER]",
+                          "key_2251ec68a07909ed8e79": "[NUMBER]",
+                          "key_cc038aa9a13d736ea332": "[NUMBER]",
+                          "key_8776e780015536a96571": "[text:da36e5af16290b4a3410]",
+                          "key_93c54f493a8c04d7cd28": "[NUMBER]",
+                          "key_b805deda63c4e3864e90": "[NUMBER]",
+                          "key_130f2eeb067e45164a0c": "[NUMBER]",
+                          "key_ee4859afa6bd805c4aea": "[NUMBER]",
+                          "key_9a82a5340362807a7330": [
+                            "[text:4187859d047d4f6041f3]",
+                            "[text:93317cde807e565ddc85]"
+                          ],
+                          "key_c160fee5df3b00a6cf43": "[text:bd01dc03e172a7879100]",
+                          "key_cfc989a8552f0791190e": "[NUMBER]",
+                          "key_4c6c4da62c2b96926d7d": "[NUMBER]"
+                        },
+                        {
+                          "key_e9846eb749eb9663572b": "[text:5cbf080f1a19ce56beee]",
+                          "key_3df043864b7469fa53ef": "[NUMBER]",
+                          "key_2251ec68a07909ed8e79": "[NUMBER]",
+                          "key_cc038aa9a13d736ea332": "[NUMBER]",
+                          "key_8776e780015536a96571": "[text:f674a6b5e72164ccdb86]"
+                        },
+                        {
+                          "key_e9846eb749eb9663572b": "[text:5cbf080f1a19ce56beee]",
+                          "key_3df043864b7469fa53ef": "[NUMBER]",
+                          "key_2251ec68a07909ed8e79": "[NUMBER]",
+                          "key_cc038aa9a13d736ea332": "[NUMBER]",
+                          "key_8776e780015536a96571": "[text:f674a6b5e72164ccdb86]"
+                        }
+                      ],
+                      "key_9674f40d2e1a3d08dcbf": "[text:bd97c6ad93ab2b990596]"
+                    }
+                  ],
+                  "key_07b389f5b1713a3285e6": [
+                    {
+                      "key_4ebbabd4cbbd68504fa4": "[PRIVATE]",
+                      "key_2e616a96f9f26ecf27bd": "[NUMBER]",
+                      "key_46bc55888ce82a8acba5": "[NUMBER]",
+                      "key_16f13c20fe7e9ee722bb": "[NUMBER]",
+                      "key_ba6004ba6552bcbf9bd3": "[text:72978aa741e1d302bb69]"
+                    },
+                    {
+                      "key_4ebbabd4cbbd68504fa4": "[PRIVATE]",
+                      "key_2e616a96f9f26ecf27bd": "[NUMBER]",
+                      "key_46bc55888ce82a8acba5": "[NUMBER]",
+                      "key_8a7319a181a1121325d4": "[NUMBER]",
+                      "key_940c827166b21424da9f": "[NUMBER]",
+                      "command": {
+                        "key_6f1dfcd4e2f408172676": "[NUMBER]",
+                        "key_16f13c20fe7e9ee722bb": "[NUMBER]",
+                        "key_4ebbabd4cbbd68504fa4": "[PRIVATE]"
+                      },
+                      "key_16f13c20fe7e9ee722bb": "[NUMBER]",
+                      "key_ba6004ba6552bcbf9bd3": "[text:94737545727a43c34c5f]"
+                    },
+                    {
+                      "key_4ebbabd4cbbd68504fa4": "[PRIVATE]",
+                      "key_2e616a96f9f26ecf27bd": "[NUMBER]",
+                      "key_46bc55888ce82a8acba5": "[NUMBER]",
+                      "key_8a7319a181a1121325d4": "[NUMBER]",
+                      "key_940c827166b21424da9f": "[NUMBER]",
+                      "command": {
+                        "key_6f1dfcd4e2f408172676": "[NUMBER]",
+                        "key_16f13c20fe7e9ee722bb": "[NUMBER]",
+                        "key_4ebbabd4cbbd68504fa4": "[PRIVATE]"
+                      },
+                      "key_16f13c20fe7e9ee722bb": "[NUMBER]",
+                      "key_ba6004ba6552bcbf9bd3": "[text:b4814bb67bf24e484ca7]",
+                      "key_9a82a5340362807a7330": [
+                        "[text:4187859d047d4f6041f3]",
+                        "[text:93317cde807e565ddc85]"
+                      ],
+                      "key_05c7dd9ccc1cc8e0a8b7": [],
+                      "key_702bfc4c25863344d7bd": "[text:bd01dc03e172a7879100]",
+                      "key_3382a5e526fee622187e": []
+                    },
+                    {
+                      "key_4ebbabd4cbbd68504fa4": "[PRIVATE]",
+                      "key_2e616a96f9f26ecf27bd": "[NUMBER]",
+                      "key_8a7319a181a1121325d4": "[NUMBER]",
+                      "key_940c827166b21424da9f": "[NUMBER]",
+                      "command": {
+                        "key_6f1dfcd4e2f408172676": "[NUMBER]",
+                        "key_16f13c20fe7e9ee722bb": "[NUMBER]",
+                        "key_4ebbabd4cbbd68504fa4": "[PRIVATE]"
+                      },
+                      "key_16f13c20fe7e9ee722bb": "[NUMBER]",
+                      "key_ba6004ba6552bcbf9bd3": "[text:20fbfc9c364003594ca7]",
+                      "text": "[text:93317cde807e565ddc85]",
+                      "key_8b6f70380650924fe0e0": "[NUMBER]"
+                    },
+                    {
+                      "key_4ebbabd4cbbd68504fa4": "[PRIVATE]",
+                      "key_2e616a96f9f26ecf27bd": "[NUMBER]",
+                      "key_46bc55888ce82a8acba5": "[NUMBER]",
+                      "key_8a7319a181a1121325d4": "[NUMBER]",
+                      "key_940c827166b21424da9f": "[NUMBER]",
+                      "command": {
+                        "key_6f1dfcd4e2f408172676": "[NUMBER]",
+                        "key_16f13c20fe7e9ee722bb": "[NUMBER]",
+                        "key_4ebbabd4cbbd68504fa4": "[PRIVATE]"
+                      },
+                      "key_16f13c20fe7e9ee722bb": "[NUMBER]",
+                      "key_ba6004ba6552bcbf9bd3": "[text:ef16abf128e86224da2e]",
+                      "key_59ac639cb918ee387767": "[NUMBER]",
+                      "key_f2309eaa31248d8fa571": "[NUMBER]",
+                      "key_3aa0050c4411fc3c5d18": []
+                    },
+                    {
+                      "key_4ebbabd4cbbd68504fa4": "[PRIVATE]",
+                      "key_2e616a96f9f26ecf27bd": "[NUMBER]",
+                      "key_46bc55888ce82a8acba5": "[NUMBER]",
+                      "key_16f13c20fe7e9ee722bb": "[NUMBER]",
+                      "key_ba6004ba6552bcbf9bd3": "[text:23f08dc97d2cd8f9b8d7]",
+                      "key_59ac639cb918ee387767": "[NUMBER]"
+                    }
+                  ]
+                }
+              }
+            },
+            "content": [
+              {
+                "type": "content",
+                "content": {
+                  "type": "text",
+                  "text": "[text:62439ee664c4a21008c6]"
+                }
+              },
+              {
+                "type": "content",
+                "content": {
+                  "type": "text",
+                  "text": "[text:93317cde807e565ddc85]"
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "seq": 18,
+      "direction": "agent",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "session/update",
+        "params": {
+          "sessionId": "id_99cd65a6eceea89ab452",
+          "update": {
+            "sessionUpdate": "tool_call_update",
+            "toolCallId": "id_1478bd41f8555cba03be",
+            "status": "completed",
+            "rawOutput": {
+              "content": [
+                {
+                  "type": "text",
+                  "text": "[text:93317cde807e565ddc85]"
+                }
+              ],
+              "details": {
+                "key_05179f481c7785fb9747": "[PRIVATE]",
+                "key_83dce0563c93f74458d1": "[NUMBER]",
+                "wallTimeMs": "[PRIVATE]",
+                "key_6f67b046125bf3b4ceeb": {
+                  "key_d0f1f5e55102bef0da03": "[NUMBER]",
+                  "key_4ebbabd4cbbd68504fa4": "[PRIVATE]",
+                  "key_59ac639cb918ee387767": "[NUMBER]",
+                  "key_953263c55e92fc067728": "[NUMBER]",
+                  "key_2e616a96f9f26ecf27bd": "[NUMBER]",
+                  "key_a9f4f66289dd73c4c660": "[text:d2f00cedb657110dce2f]",
+                  "key_2d5bd32f6f5f76e7eb6f": [
+                    {
+                      "key_ee4859afa6bd805c4aea": "[NUMBER]",
+                      "key_a8406075e865b7208c37": "[NUMBER]",
+                      "key_a1c2957b6ef0d785a93e": "[NUMBER]",
+                      "key_9aaf31b4f9e4c43e80a4": [
+                        {
+                          "key_e9846eb749eb9663572b": "[text:3d371de3bab3f2047601]",
+                          "key_3df043864b7469fa53ef": "[NUMBER]",
+                          "key_2251ec68a07909ed8e79": "[NUMBER]",
+                          "key_8776e780015536a96571": "[text:da36e5af16290b4a3410]"
+                        },
+                        {
+                          "key_e9846eb749eb9663572b": "[text:ecf63f72e01d89f3f47f]",
+                          "key_3df043864b7469fa53ef": "[NUMBER]",
+                          "key_2251ec68a07909ed8e79": "[NUMBER]",
+                          "key_cc038aa9a13d736ea332": "[NUMBER]",
+                          "key_8776e780015536a96571": "[text:da36e5af16290b4a3410]"
+                        },
+                        {
+                          "key_e9846eb749eb9663572b": "[text:38f2e8c5af97a0200aef]",
+                          "key_3df043864b7469fa53ef": "[NUMBER]",
+                          "key_2251ec68a07909ed8e79": "[NUMBER]",
+                          "key_cc038aa9a13d736ea332": "[NUMBER]",
+                          "key_8776e780015536a96571": "[text:da36e5af16290b4a3410]",
+                          "key_93c54f493a8c04d7cd28": "[NUMBER]",
+                          "key_b805deda63c4e3864e90": "[NUMBER]",
+                          "key_130f2eeb067e45164a0c": "[NUMBER]",
+                          "key_ee4859afa6bd805c4aea": "[NUMBER]",
+                          "key_9a82a5340362807a7330": [
+                            "[text:4187859d047d4f6041f3]",
+                            "[text:93317cde807e565ddc85]"
+                          ],
+                          "key_c160fee5df3b00a6cf43": "[text:bd01dc03e172a7879100]",
+                          "key_cfc989a8552f0791190e": "[NUMBER]",
+                          "key_4c6c4da62c2b96926d7d": "[NUMBER]"
+                        },
+                        {
+                          "key_e9846eb749eb9663572b": "[text:5cbf080f1a19ce56beee]",
+                          "key_3df043864b7469fa53ef": "[NUMBER]",
+                          "key_2251ec68a07909ed8e79": "[NUMBER]",
+                          "key_cc038aa9a13d736ea332": "[NUMBER]",
+                          "key_8776e780015536a96571": "[text:f674a6b5e72164ccdb86]"
+                        },
+                        {
+                          "key_e9846eb749eb9663572b": "[text:5cbf080f1a19ce56beee]",
+                          "key_3df043864b7469fa53ef": "[NUMBER]",
+                          "key_2251ec68a07909ed8e79": "[NUMBER]",
+                          "key_cc038aa9a13d736ea332": "[NUMBER]",
+                          "key_8776e780015536a96571": "[text:f674a6b5e72164ccdb86]"
+                        }
+                      ],
+                      "key_9674f40d2e1a3d08dcbf": "[text:bd97c6ad93ab2b990596]"
+                    }
+                  ],
+                  "key_07b389f5b1713a3285e6": [
+                    {
+                      "key_4ebbabd4cbbd68504fa4": "[PRIVATE]",
+                      "key_2e616a96f9f26ecf27bd": "[NUMBER]",
+                      "key_46bc55888ce82a8acba5": "[NUMBER]",
+                      "key_16f13c20fe7e9ee722bb": "[NUMBER]",
+                      "key_ba6004ba6552bcbf9bd3": "[text:72978aa741e1d302bb69]"
+                    },
+                    {
+                      "key_4ebbabd4cbbd68504fa4": "[PRIVATE]",
+                      "key_2e616a96f9f26ecf27bd": "[NUMBER]",
+                      "key_46bc55888ce82a8acba5": "[NUMBER]",
+                      "key_8a7319a181a1121325d4": "[NUMBER]",
+                      "key_940c827166b21424da9f": "[NUMBER]",
+                      "command": {
+                        "key_6f1dfcd4e2f408172676": "[NUMBER]",
+                        "key_16f13c20fe7e9ee722bb": "[NUMBER]",
+                        "key_4ebbabd4cbbd68504fa4": "[PRIVATE]"
+                      },
+                      "key_16f13c20fe7e9ee722bb": "[NUMBER]",
+                      "key_ba6004ba6552bcbf9bd3": "[text:94737545727a43c34c5f]"
+                    },
+                    {
+                      "key_4ebbabd4cbbd68504fa4": "[PRIVATE]",
+                      "key_2e616a96f9f26ecf27bd": "[NUMBER]",
+                      "key_46bc55888ce82a8acba5": "[NUMBER]",
+                      "key_8a7319a181a1121325d4": "[NUMBER]",
+                      "key_940c827166b21424da9f": "[NUMBER]",
+                      "command": {
+                        "key_6f1dfcd4e2f408172676": "[NUMBER]",
+                        "key_16f13c20fe7e9ee722bb": "[NUMBER]",
+                        "key_4ebbabd4cbbd68504fa4": "[PRIVATE]"
+                      },
+                      "key_16f13c20fe7e9ee722bb": "[NUMBER]",
+                      "key_ba6004ba6552bcbf9bd3": "[text:b4814bb67bf24e484ca7]",
+                      "key_9a82a5340362807a7330": [
+                        "[text:4187859d047d4f6041f3]",
+                        "[text:93317cde807e565ddc85]"
+                      ],
+                      "key_05c7dd9ccc1cc8e0a8b7": [],
+                      "key_702bfc4c25863344d7bd": "[text:bd01dc03e172a7879100]",
+                      "key_3382a5e526fee622187e": []
+                    },
+                    {
+                      "key_4ebbabd4cbbd68504fa4": "[PRIVATE]",
+                      "key_2e616a96f9f26ecf27bd": "[NUMBER]",
+                      "key_8a7319a181a1121325d4": "[NUMBER]",
+                      "key_940c827166b21424da9f": "[NUMBER]",
+                      "command": {
+                        "key_6f1dfcd4e2f408172676": "[NUMBER]",
+                        "key_16f13c20fe7e9ee722bb": "[NUMBER]",
+                        "key_4ebbabd4cbbd68504fa4": "[PRIVATE]"
+                      },
+                      "key_16f13c20fe7e9ee722bb": "[NUMBER]",
+                      "key_ba6004ba6552bcbf9bd3": "[text:20fbfc9c364003594ca7]",
+                      "text": "[text:93317cde807e565ddc85]",
+                      "key_8b6f70380650924fe0e0": "[NUMBER]"
+                    },
+                    {
+                      "key_4ebbabd4cbbd68504fa4": "[PRIVATE]",
+                      "key_2e616a96f9f26ecf27bd": "[NUMBER]",
+                      "key_46bc55888ce82a8acba5": "[NUMBER]",
+                      "key_8a7319a181a1121325d4": "[NUMBER]",
+                      "key_940c827166b21424da9f": "[NUMBER]",
+                      "command": {
+                        "key_6f1dfcd4e2f408172676": "[NUMBER]",
+                        "key_16f13c20fe7e9ee722bb": "[NUMBER]",
+                        "key_4ebbabd4cbbd68504fa4": "[PRIVATE]"
+                      },
+                      "key_16f13c20fe7e9ee722bb": "[NUMBER]",
+                      "key_ba6004ba6552bcbf9bd3": "[text:ef16abf128e86224da2e]",
+                      "key_59ac639cb918ee387767": "[NUMBER]",
+                      "key_f2309eaa31248d8fa571": "[NUMBER]",
+                      "key_3aa0050c4411fc3c5d18": []
+                    },
+                    {
+                      "key_4ebbabd4cbbd68504fa4": "[PRIVATE]",
+                      "key_2e616a96f9f26ecf27bd": "[NUMBER]",
+                      "key_46bc55888ce82a8acba5": "[NUMBER]",
+                      "key_16f13c20fe7e9ee722bb": "[NUMBER]",
+                      "key_ba6004ba6552bcbf9bd3": "[text:23f08dc97d2cd8f9b8d7]",
+                      "key_59ac639cb918ee387767": "[NUMBER]"
+                    }
+                  ]
+                }
+              }
+            },
+            "content": [
+              {
+                "type": "content",
+                "content": {
+                  "type": "text",
+                  "text": "[text:62439ee664c4a21008c6]"
+                }
+              },
+              {
+                "type": "content",
+                "content": {
+                  "type": "text",
+                  "text": "[text:93317cde807e565ddc85]"
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "seq": 19,
+      "direction": "agent",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "session/update",
+        "params": {
+          "sessionId": "id_99cd65a6eceea89ab452",
+          "update": {
+            "sessionUpdate": "agent_message_chunk",
+            "content": {
+              "type": "text",
+              "text": "[text:ae421988b8dc00ca7dc7]"
+            },
+            "messageId": "id_8122a56e6e7a315b04c9"
+          }
+        }
+      }
+    },
+    {
+      "seq": 20,
+      "direction": "agent",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "session/update",
+        "params": {
+          "sessionId": "id_99cd65a6eceea89ab452",
+          "update": {
+            "sessionUpdate": "usage_update",
+            "size": 200000,
+            "used": 1
+          }
+        }
+      }
+    },
+    {
+      "seq": 21,
+      "direction": "agent",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "session/update",
+        "params": {
+          "sessionId": "id_99cd65a6eceea89ab452",
+          "update": {
+            "sessionUpdate": "session_info_update",
+            "updatedAt": "[text:bc5f8c2638990448354c]"
+          }
+        }
+      }
+    },
+    {
+      "seq": 22,
+      "direction": "agent",
+      "message": {
+        "jsonrpc": "2.0",
+        "id": "id_f3d61c06ada66519653f",
+        "result": {
+          "stopReason": "end_turn",
+          "usage": {
+            "inputTokens": 4,
+            "outputTokens": 8,
+            "totalTokens": 12
+          }
+        }
+      }
+    }
+  ]
+}

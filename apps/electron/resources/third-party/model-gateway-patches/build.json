@@ -1,0 +1,22 @@
+{
+  "upstreamVersion": "0.1.4596",
+  "version": "0.1.4596-tervell.1",
+  "repository": "https://github.com/yetone/magpie",
+  "commit": "f65fe92ef93557e9a2098d2606a4d9c0175a4213",
+  "archiveSha256": "c0827578181dfb5befe62210bb9d16b611ce8665669571837b83d4bf4d24d7c4",
+  "patch": "exact-effort.patch",
+  "patchSha256": "c6a4c5bc7f19b71c4308a9bd66122ddbda2c3dc728434a5709e9401f38f258a8",
+  "go": "go1.26.8",
+  "build": "CGO_ENABLED=0 GOOS=darwin GOARCH=<arm64|amd64> go build -tags nogui -trimpath -buildvcs=false -ldflags='-s -w -X main.version=0.1.4596-tervell.1'",
+  "binarySha256": {
+    "arm64": "f91fa6779c933a796cebf307e7b9ad73acde8cbbe1be2bce16db589bc57d23a3",
+    "x64": "46ac391bf96d104a7773fc5086a49f4ac4541a4259cfe112c0f192e8099fd576",
+    "win32-x64": "f340031bd0e79bd051b59fb9d88398da224b3f4c9c089516bc2af37b1f8d5db2"
+  },
+  "verification": {
+    "arm64": "compiled and local gateway regression",
+    "x64": "cross-compiled only; native runtime not tested",
+    "win32-x64": "Windows PE x64 cross-compiled; native runtime awaits Windows test"
+  },
+  "windowsBuild": "CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -tags nogui -trimpath -buildvcs=false -ldflags=\"-s -w -X main.version=0.1.4596-tervell.1\""
+}

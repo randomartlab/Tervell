@@ -1,0 +1,166 @@
+--- a/internal/provider/modelheaders.go
++++ b/internal/provider/modelheaders.go
+@@ -50,6 +50,9 @@
+ 	}
+ 	return ""
+ }
++
++// RequestModel returns the model this provider is serving in this request.
++func (p Provider) RequestModel(ctx context.Context) string { return p.modelOf(ctx) }
+ 
+ // ModelHeaders are the headers the user gave provider pid's model.
+ func ModelHeaders(pid, model string) map[string]string {
+--- a/internal/gateway/gateway.go
++++ b/internal/gateway/gateway.go
+@@ -2681,6 +2681,15 @@
+ 	// a client's "off" is magpie's none, for every route and check below
+ 	// that reads the body's effort (plugins#334)
+ 	body = offAsNone(from, body)
++	if r.Header.Get("X-Tervell-Exact-Effort") == "1" {
++		effort := bodyEffort(from, body)
++		if from == provider.Gemini {
++			effort = gjson.GetBytes(body, "generationConfig.thinkingConfig.thinkingLevel").String()
++		}
++		if effort != "" && len(effort) <= 64 && !strings.ContainsAny(effort, "\r\n") {
++			r = r.WithContext(context.WithValue(r.Context(), tervellEffortKey{}, effort))
++		}
++	}
+ 	// inline base64 goes in the standard alphabet, padded, which every
+ 	// vendor reads, on every route below and for every check that reads
+ 	// an image's bytes (base64_input.go, #5697)
+@@ -4693,7 +4702,7 @@
+ 					defer release()
+ 					defer hw.watch()()
+ 					defer notePhase(ctx, "upstream")()
+-					call.Status, call.Error = s.attempt(hw, r.WithContext(ctx), from, c.p, c.model, attemptBody, &call)
++					call.Status, call.Error = s.attempt(hw, r.WithContext(context.WithValue(ctx, tervellEffortAllowed{}, fixed == "" && ruled == "" && mapped == "" && !quiet)), from, c.p, c.model, attemptBody, &call)
+ 				}()
+ 			}
+ 			stop()
+@@ -6607,6 +6616,7 @@
+ 		// the user's own fields for the provider (#1604), last, so the
+ 		// body is as it goes out when they fill in what it lacks, and
+ 		// before it is signed
++		body = tervellExactEffort(ctx, p, to, body)
+ 		extra := p.WithExtraBody(body, conv)
+ 		if to == provider.Anthropic && !bytes.Equal(extra, body) {
+ 			// a thinking budget the user's fields put in is fitted to a
+@@ -6805,6 +6815,8 @@
+ 	if err := p.Sign(ctx, req, to, body); err != nil {
+ 		return nil, err
+ 	}
++	req.Header.Del("X-Tervell-Exact-Effort")
++	req.Header.Del("X-Tervell-Exact-Model")
+ 	// the turn's routing goes on to the account that was given it, as
+ 	// Codex's own client sends it (codex_turnstate.go)
+ 	turnAcct, turnOf := codexTurnAccount(p, req.Header), ""
+--- /dev/null
++++ b/internal/gateway/tervell_effort.go
+@@ -0,0 +1,54 @@
++package gateway
++
++import (
++	"context"
++	"encoding/json"
++	"slices"
++	"strings"
++
++	"github.com/yetone/magpie/internal/provider"
++)
++
++// Tervell's model picker preserves the vendor's own level, including aliases
++// that the generic translation IR normalises. This is opt-in per request and
++// only a level explicitly offered by the selected upstream model is restored.
++// Group selection, accounts, fallback, and user extraBody still run normally.
++// Codex Ultra is a client orchestration mode, not a raw API effort.
++type tervellEffortAllowed struct{}
++type tervellEffortKey struct{}
++
++func tervellExactEffort(ctx context.Context, p provider.Provider, to provider.Protocol, body []byte) []byte {
++	if allowed, ok := ctx.Value(tervellEffortAllowed{}).(bool); ok && !allowed {
++		return body
++	}
++	effort, _ := ctx.Value(tervellEffortKey{}).(string)
++	model := p.RequestModel(ctx)
++	if effort == "" || len(effort) > 64 || strings.ContainsAny(effort, "\r\n") || model == "" || !slices.Contains(p.Efforts(model), effort) {
++		return body
++	}
++	if effort == "ultra" && (provider.OffersUltra(model) || p.Account != nil && p.Account.Agent == "codex") {
++		return body
++	}
++	if to == provider.Anthropic && !bodyHas(body, "output_config") {
++		body = withFields(body, map[string]any{"output_config": map[string]any{}})
++	}
++	if to == provider.Gemini {
++		var top map[string]json.RawMessage
++		if decodeJSON(body, &top) != nil {
++			return body
++		}
++		config := map[string]any{}
++		if raw := top["generationConfig"]; len(raw) > 0 {
++			if decodeJSON(raw, &config) != nil {
++				return body
++			}
++		}
++		if effort == "none" {
++			config["thinkingConfig"] = map[string]any{"thinkingBudget": 0}
++		} else {
++			config["thinkingConfig"] = map[string]any{"thinkingLevel": effort}
++		}
++		return withFields(body, map[string]any{"generationConfig": config})
++	}
++	return withBodyEffort(to, body, effort)
++}
+--- /dev/null
++++ b/internal/gateway/tervell_effort_test.go
+@@ -0,0 +1,50 @@
++package gateway
++
++import (
++	"context"
++	"encoding/json"
++	"io"
++	"net/http"
++	"net/http/httptest"
++	"testing"
++
++	"github.com/tidwall/gjson"
++	"github.com/yetone/magpie/internal/provider"
++)
++
++func TestTervellExplicitVendorEffort(t *testing.T) {
++	fresh(t)
++	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		w.Header().Set("Content-Type", "application/json")
++		io.WriteString(w, `{"data":[{"id":"vendor-model","reasoning":true,"supported_reasoning_levels":[{"effort":"none"},{"effort":"low"},{"effort":"high"},{"effort":"ultra"},{"effort":"vendor-future"}]}]}`)
++	}))
++	defer upstream.Close()
++	p := provider.Provider{ID: "tervell-fixture", Name: "Fixture", Key: "fixture", Chat: upstream.URL + "/v1", Models: []string{"vendor-model"}}
++	if err := provider.Save(p); err != nil {
++		t.Fatal(err)
++	}
++	if _, _, err := p.Refetch(context.Background()); err != nil {
++		t.Fatal(err)
++	}
++	ctx := provider.WithModel(context.Background(), p.ID, "vendor-model")
++	for _, proto := range []provider.Protocol{provider.Chat, provider.Responses, provider.Anthropic, provider.Gemini} {
++		for _, effort := range []string{"ultra", "vendor-future"} {
++			body := []byte(`{"model":"vendor-model","reasoning_effort":"high","reasoning":{"effort":"high"},"output_config":{"effort":"high"},"generationConfig":{"thinkingConfig":{"thinkingLevel":"high"}}}`)
++			out := tervellExactEffort(context.WithValue(ctx, tervellEffortKey{}, effort), p, proto, body)
++			got := bodyEffort(proto, out)
++			if proto == provider.Gemini {
++				got = gjson.GetBytes(out, "generationConfig.thinkingConfig.thinkingLevel").String()
++			}
++			if !json.Valid(out) || got != effort {
++				t.Fatalf("%s/%s: %s", proto, effort, out)
++			}
++			if string(tervellExactEffort(context.WithValue(context.WithValue(ctx, tervellEffortKey{}, effort), tervellEffortAllowed{}, false), p, proto, body)) != string(body) {
++				t.Fatal("group override ignored")
++			}
++			blocked := context.WithValue(ctx, tervellEffortKey{}, "unsupported")
++			if string(tervellExactEffort(blocked, p, proto, body)) != string(body) {
++				t.Fatal("unsupported effort changed body")
++			}
++		}
++	}
++}
