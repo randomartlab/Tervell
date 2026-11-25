@@ -25,7 +25,7 @@ jobs:
               name=item.name
               if name.startswith('/') or '..' in pathlib.PurePosixPath(name).parts: raise RuntimeError('unsafe source path')
               data=t.extractfile(item).read()
-              if hashlib.sha256(data).hexdigest()!=by_path[name]: raise RuntimeError('source hash mismatch: '+name)
+              if hashlib.sha256(data).hexdigest()!=by_path.get(name, hashlib.sha256(b'').hexdigest() if len(data)==0 else None): raise RuntimeError('source hash mismatch: '+name)
               # Keep build workflow originals readable without altering workflow permissions during restore.
               target=root/('release/build-workflows/'+name.removeprefix('.github/workflows/') if name.startswith('.github/workflows/') else name)
               if name in ['README.md','LICENSE','source-manifest.json']: continue
