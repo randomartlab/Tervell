@@ -1,0 +1,49 @@
+name: Tervell 产品站
+on:
+  workflow_dispatch:
+  push:
+    paths: ['site-source.tar.gz', 'site-source-sha256.txt', '.github/workflows/site-pages.yml']
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: product-site
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - run: |
+          sha256sum -c site-source-sha256.txt
+          mkdir site-work
+          tar -xzf site-source.tar.gz -C site-work
+      - name: 使用固定锁文件构建产品站
+        working-directory: site-work
+        run: |
+          bun install --frozen-lockfile --ignore-scripts
+          bun run typecheck
+          bun run build
+        env:
+          SITE_BASE: /Tervell/
+          SITE_ORIGIN: https://randomartlab.github.io
+          VITE_MIRROR_READY: '0'
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site-work/dist
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deployment
