@@ -1,0 +1,40 @@
+name: 展开已校验的发行源码
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 验证并展开公开对应源码
+        shell: python
+        run: |
+          import hashlib, tarfile, pathlib, json
+          root=pathlib.Path.cwd()
+          archive=root/'Tervell-0.19.119-source.tar.xz'
+          expected=json.loads((root/'source-manifest.json').read_text())
+          by_path={entry['path']:entry['sha256'] for entry in expected['files']}
+          restored=0
+          with tarfile.open(archive) as t:
+            for item in t.getmembers():
+              if not item.isfile(): continue
+              name=item.name
+              if name.startswith('/') or '..' in pathlib.PurePosixPath(name).parts: raise RuntimeError('unsafe source path')
+              data=t.extractfile(item).read()
+              if hashlib.sha256(data).hexdigest()!=by_path[name]: raise RuntimeError('source hash mismatch: '+name)
+              # Keep build workflow originals readable without altering workflow permissions during restore.
+              target=root/('release/build-workflows/'+name.removeprefix('.github/workflows/') if name.startswith('.github/workflows/') else name)
+              if name in ['README.md','LICENSE','source-manifest.json']: continue
+              target.parent.mkdir(parents=True,exist_ok=True)
+              target.write_bytes(data)
+              restored+=1
+          print('Verified and restored',restored,'source files')
+      - name: 提交可浏览源码树
+        run: |
+          git config user.name 'Random Art Lab'
+          git config user.email 'randomartlab@users.noreply.github.com'
+          git add .
+          git diff --cached --quiet || git commit -m 'Expand verified Tervell 0.19.119 corresponding source'
+          git push origin HEAD:main
