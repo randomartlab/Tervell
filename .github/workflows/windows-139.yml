@@ -1,4 +1,4 @@
-name: Tervell 0.19.141 Windows 原生验收
+name: Tervell 0.19.142 Windows 原生验收
 on:
   workflow_dispatch:
   push:
@@ -7,7 +7,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: tervell-windows-141
+  group: tervell-windows-142
   cancel-in-progress: false
 jobs:
   windows:
@@ -31,14 +31,14 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $archive = Join-Path $env:RUNNER_TEMP 'tervell-source.tar.gz'
-          Invoke-WebRequest 'https://randomai.art/downloads/v0.19.141/Tervell-0.19.141-source.tar.gz' -OutFile $archive
-          if ((Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant() -ne 'f3a9a503c6a6d04828ca825bd8d73aff1a5b1433cad97046c493208cab44f30d') { throw 'source archive hash mismatch' }
+          Invoke-WebRequest 'https://randomai.art/downloads/v0.19.142/Tervell-0.19.142-source.tar.gz' -OutFile $archive
+          if ((Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant() -ne '6ec036d136f19aca627dac09c98d5210b9956f9831de388d988a835cc700d731') { throw 'source archive hash mismatch' }
           New-Item -ItemType Directory -Force source | Out-Null
           tar -xzf $archive -C source
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          Invoke-WebRequest 'https://randomai.art/downloads/v0.19.141/source-manifest.json' -OutFile source/qa-source-manifest.json
+          Invoke-WebRequest 'https://randomai.art/downloads/v0.19.142/source-manifest.json' -OutFile source/qa-source-manifest.json
           $manifest = Get-Content source/qa-source-manifest.json -Raw | ConvertFrom-Json
-          if ($manifest.archiveSha256 -ne 'f3a9a503c6a6d04828ca825bd8d73aff1a5b1433cad97046c493208cab44f30d' -or $manifest.version -ne '0.19.141') { throw 'manifest mismatch' }
+          if ($manifest.archiveSha256 -ne '6ec036d136f19aca627dac09c98d5210b9956f9831de388d988a835cc700d731' -or $manifest.version -ne '0.19.142') { throw 'manifest mismatch' }
           foreach ($entry in $manifest.files) {
             if ($entry.path -match '(^/|(^|/)\.\.(/|$)|:)') { throw 'unsafe manifest path' }
             $file = Join-Path source $entry.path
@@ -58,6 +58,8 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           bun test --isolate scripts/light-default.test.ts scripts/official-acp-peer.test.ts scripts/omp-launch-policy.test.ts scripts/omp-admission.test.ts scripts/probe-upgrade-recovery.test.ts scripts/acp-graceful-close.test.ts scripts/gateway-auth.test.ts scripts/managed-cli-retention.test.ts scripts/shared-cli-runtime.test.ts scripts/native-probe-isolation.test.ts
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          bun test scripts/gateway-flat-model.test.ts
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: 准备原生运行时及网关
         working-directory: source
         shell: pwsh
@@ -74,12 +76,6 @@ jobs:
       - name: 原生安装与核心运行验收
         working-directory: source
         run: pwsh -File apps/electron/scripts/smoke-windows-install.ps1
-      - name: 保留流式15秒断言并分开初始化等待
-        working-directory: source
-        shell: pwsh
-        run: |
-          Invoke-WebRequest 'https://randomai.art/downloads/v0.19.141/verify-acp-host-runtime-diagnostic.ts' -OutFile scripts/verify-acp-host-runtime.ts
-          if ((Get-FileHash scripts/verify-acp-host-runtime.ts).Hash.ToLowerInvariant() -ne 'a23e36ffe4cab6a8a98593a1dde6ce3361537a80975e2c99036b88143e7705c7') { throw 'test hash mismatch' }
       - name: 真实CLI工具与取消验收
         working-directory: source
         run: pwsh -File apps/electron/scripts/verify-windows-kernels.ps1
@@ -87,7 +83,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: windows-141-diagnostics
+          name: windows-142-diagnostics
           path: |
             source/apps/electron/out/windows-alpha/native-smoke/
             source/qa-source-manifest.json
@@ -96,7 +92,7 @@ jobs:
       - name: 只交付全部步骤通过的安装包
         uses: actions/upload-artifact@v4
         with:
-          name: tervell-0.19.141-windows-x64-native
+          name: tervell-0.19.142-windows-x64-native
           path: source/apps/electron/out/windows-alpha/*-setup.exe
           if-no-files-found: error
           retention-days: 14
