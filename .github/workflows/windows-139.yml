@@ -41,11 +41,15 @@ jobs:
           $env:TERVELL_QA_NODE_BIN=(Get-Command node.exe).Source
           $env:TERVELL_QA_EVIDENCE_DIR=Join-Path $PWD 'evidence'
           $electron=Join-Path $env:USERPROFILE '.cache/tervell/windows-build/electron-win32-x64/electron.exe'
-          & $electron apps/electron/dist/acp-host-runtime-verify.cjs
-          exit $LASTEXITCODE
+          New-Item -ItemType Directory -Force evidence | Out-Null
+          & $electron apps/electron/dist/acp-host-runtime-verify.cjs 2>&1 | Tee-Object -FilePath evidence/host.log
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          if (-not (Test-Path evidence/acp-host-runtime.json)) { throw '缺少真实测试完成证据' }
+          if (-not (Get-Content evidence/acp-host-runtime.json -Raw | ConvertFrom-Json).ok) { throw '原断言未通过' }
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: acp-original-assertion-diagnostics
           path: source/evidence/
+          if-no-files-found: error
           retention-days: 14
