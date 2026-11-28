@@ -76,6 +76,12 @@ jobs:
       - name: 原生安装与核心运行验收
         working-directory: source
         run: pwsh -File apps/electron/scripts/smoke-windows-install.ps1
+      - name: 同模型接续测试使用受管会话认证
+        working-directory: source
+        shell: pwsh
+        run: |
+          Invoke-WebRequest 'https://randomai.art/downloads/v0.19.144/observation-test.ts' -OutFile scripts/verify-routed-reply-observation.ts
+          if ((Get-FileHash scripts/verify-routed-reply-observation.ts).Hash.ToLowerInvariant() -ne '5d0a78331d13d5f6876ebb78ca49bddba34ed7d2c079028323fefb5fadf3462d') { throw 'test hash mismatch' }
       - name: 真实CLI工具与取消验收
         working-directory: source
         run: pwsh -File apps/electron/scripts/verify-windows-kernels.ps1
@@ -88,6 +94,7 @@ jobs:
             source/apps/electron/out/windows-alpha/native-smoke/
             source/qa-source-manifest.json
             source/scripts/verify-acp-host-runtime.ts
+            source/scripts/verify-routed-reply-observation.ts
           retention-days: 14
       - name: 只交付全部步骤通过的安装包
         uses: actions/upload-artifact@v4
