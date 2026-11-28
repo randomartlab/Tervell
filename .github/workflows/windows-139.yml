@@ -1,4 +1,4 @@
-name: Tervell 0.19.143 Windows 原生验收
+name: Windows 探测目录失败堆栈诊断
 on:
   workflow_dispatch:
   push:
@@ -70,15 +70,22 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           New-Item -ItemType Directory -Force apps/electron/resources/model-gateway | Out-Null
           Copy-Item vendor/model-gateway/win32-x64/magpie.exe apps/electron/resources/model-gateway/magpie.exe
-      - name: 原生NSIS构建
+      - name: 两个失败内核原断言诊断
         working-directory: source
-        run: bun run --cwd apps/electron dist:alpha:win
-      - name: 原生安装与核心运行验收
-        working-directory: source
-        run: pwsh -File apps/electron/scripts/smoke-windows-install.ps1
-      - name: 真实CLI工具与取消验收
-        working-directory: source
-        run: pwsh -File apps/electron/scripts/verify-windows-kernels.ps1
+        shell: pwsh
+        run: |
+          Invoke-WebRequest 'https://randomai.art/downloads/v0.19.143/dialogue-diagnostic.ts' -OutFile scripts/verify-managed-kernel-dialogue.ts
+          if ((Get-FileHash scripts/verify-managed-kernel-dialogue.ts).Hash.ToLowerInvariant() -ne 'cf791f8ed54546adcf9074286aab3397b20e9b0c0dde0ee85e267d846bdd9d20') { throw 'test hash mismatch' }
+          node node_modules/esbuild/bin/esbuild scripts/verify-managed-kernel-dialogue.ts --bundle --platform=node --format=cjs --external:electron --external:sharp --external:esbuild --external:@earendil-works/pi-coding-agent --external:@earendil-works/pi-agent-core --external:@earendil-works/pi-ai --outfile=apps/electron/dist/dialogue.cjs
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          $env:TERVELL_QA_NODE_BIN=(Get-Command node.exe).Source
+          $env:TERVELL_QA_KERNELS='opencode,crow-cli'
+          $env:TERVELL_QA_EVIDENCE_DIR=Join-Path $PWD 'apps/electron/out/windows-alpha/native-smoke'
+          $electron=Join-Path $env:USERPROFILE '.cache/tervell/windows-build/electron-win32-x64/electron.exe'
+          New-Item -ItemType Directory -Force $env:TERVELL_QA_EVIDENCE_DIR | Out-Null
+          & $electron apps/electron/dist/dialogue.cjs 2>&1 | Tee-Object -FilePath apps/electron/out/windows-alpha/native-smoke/diagnostic.log
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          if (-not (Test-Path apps/electron/out/windows-alpha/native-smoke/dialogue-report.json)) { throw 'no evidence' }
       - name: 保存诊断与精确源码身份
         if: always()
         uses: actions/upload-artifact@v4
@@ -88,11 +95,4 @@ jobs:
             source/apps/electron/out/windows-alpha/native-smoke/
             source/qa-source-manifest.json
             source/scripts/verify-acp-host-runtime.ts
-          retention-days: 14
-      - name: 只交付全部步骤通过的安装包
-        uses: actions/upload-artifact@v4
-        with:
-          name: tervell-0.19.143-windows-x64-native
-          path: source/apps/electron/out/windows-alpha/*-setup.exe
-          if-no-files-found: error
           retention-days: 14
