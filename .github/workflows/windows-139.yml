@@ -1,0 +1,95 @@
+name: Tervell 0.19.139 Windows 原生验收
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [.github/workflows/windows-139.yml]
+permissions:
+  contents: read
+concurrency:
+  group: tervell-windows-139
+  cancel-in-progress: false
+jobs:
+  windows:
+    runs-on: windows-2025
+    timeout-minutes: 90
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 1.26.8
+          cache: false
+      - name: 固定源码摘要并核验全部文件
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $archive = Join-Path $env:RUNNER_TEMP 'tervell-source.tar.gz'
+          Invoke-WebRequest 'https://randomai.art/downloads/v0.19.139/Tervell-0.19.139-source.tar.gz' -OutFile $archive
+          if ((Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant() -ne '3211c1a2b0717cbacf3a088728e2a8992bec799a5131a1f08c51dd68a3248760') { throw 'source archive hash mismatch' }
+          New-Item -ItemType Directory -Force source | Out-Null
+          tar -xzf $archive -C source
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          Invoke-WebRequest 'https://randomai.art/downloads/v0.19.139/source-manifest.json' -OutFile source/qa-source-manifest.json
+          $manifest = Get-Content source/qa-source-manifest.json -Raw | ConvertFrom-Json
+          if ($manifest.archiveSha256 -ne '3211c1a2b0717cbacf3a088728e2a8992bec799a5131a1f08c51dd68a3248760' -or $manifest.version -ne '0.19.139') { throw 'manifest mismatch' }
+          foreach ($entry in $manifest.files) {
+            if ($entry.path -match '(^/|(^|/)\.\.(/|$)|:)') { throw 'unsafe manifest path' }
+            $file = Join-Path source $entry.path
+            if ((Get-FileHash $file -Algorithm SHA256).Hash.ToLowerInvariant() -ne $entry.sha256 -or (Get-Item $file).Length -ne $entry.bytes) { throw "source mismatch: $($entry.path)" }
+          }
+      - name: 固定依赖与安全回归
+        working-directory: source
+        shell: pwsh
+        run: |
+          bun install --frozen-lockfile
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          bun run gen:check
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          bun run typecheck
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          bun run --cwd apps/electron build:office-preview
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          bun test --isolate scripts/official-acp-peer.test.ts scripts/omp-launch-policy.test.ts scripts/omp-admission.test.ts scripts/probe-upgrade-recovery.test.ts scripts/acp-graceful-close.test.ts scripts/gateway-auth.test.ts scripts/managed-cli-retention.test.ts scripts/shared-cli-runtime.test.ts scripts/native-probe-isolation.test.ts
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: 准备原生运行时及网关
+        working-directory: source
+        shell: pwsh
+        run: |
+          node apps/electron/scripts/prepare-windows-assets.cjs
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          node apps/electron/scripts/build-windows-gateway.cjs
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          New-Item -ItemType Directory -Force apps/electron/resources/model-gateway | Out-Null
+          Copy-Item vendor/model-gateway/win32-x64/magpie.exe apps/electron/resources/model-gateway/magpie.exe
+      - name: 原生NSIS构建
+        working-directory: source
+        run: bun run --cwd apps/electron dist:alpha:win
+      - name: 原生安装与核心运行验收
+        working-directory: source
+        run: pwsh -File apps/electron/scripts/smoke-windows-install.ps1
+      - name: 真实CLI工具与取消验收
+        working-directory: source
+        run: pwsh -File apps/electron/scripts/verify-windows-kernels.ps1
+      - name: 保存诊断与精确源码身份
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-139-diagnostics
+          path: |
+            source/apps/electron/out/windows-alpha/native-smoke/
+            source/qa-source-manifest.json
+          retention-days: 14
+      - name: 只交付全部步骤通过的安装包
+        uses: actions/upload-artifact@v4
+        with:
+          name: tervell-0.19.139-windows-x64-native
+          path: source/apps/electron/out/windows-alpha/*-setup.exe
+          if-no-files-found: error
+          retention-days: 14
