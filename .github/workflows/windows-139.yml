@@ -74,6 +74,10 @@ jobs:
         working-directory: source
         shell: pwsh
         run: |
+          Invoke-WebRequest 'https://randomai.art/downloads/v0.19.143/kernel-route-storage.ts' -OutFile apps/electron/src/main/lib/kernel-route-storage.ts
+          Invoke-WebRequest 'https://randomai.art/downloads/v0.19.143/desktop-cli-handshake.ts' -OutFile apps/electron/src/main/lib/desktop-cli-handshake.ts
+          if ((Get-FileHash apps/electron/src/main/lib/kernel-route-storage.ts).Hash.ToLowerInvariant() -ne '3952d763f4ec605350f2e26dbac3e4553ec205031157b24f2a2d3767836f53a4') { throw 'storage patch mismatch' }
+          if ((Get-FileHash apps/electron/src/main/lib/desktop-cli-handshake.ts).Hash.ToLowerInvariant() -ne 'a8cd17b168c83af59c352d754c7a872a3ded8eee6dbbe148a685bc1995b180e3') { throw 'handshake patch mismatch' }
           Invoke-WebRequest 'https://randomai.art/downloads/v0.19.143/dialogue-diagnostic.ts' -OutFile scripts/verify-managed-kernel-dialogue.ts
           if ((Get-FileHash scripts/verify-managed-kernel-dialogue.ts).Hash.ToLowerInvariant() -ne 'cf791f8ed54546adcf9074286aab3397b20e9b0c0dde0ee85e267d846bdd9d20') { throw 'test hash mismatch' }
           node node_modules/esbuild/bin/esbuild scripts/verify-managed-kernel-dialogue.ts --bundle --platform=node --format=cjs --external:electron --external:sharp --external:esbuild --external:@earendil-works/pi-coding-agent --external:@earendil-works/pi-agent-core --external:@earendil-works/pi-ai --outfile=apps/electron/dist/dialogue.cjs
