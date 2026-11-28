@@ -1,4 +1,4 @@
-name: Windows ACP 0.19.141 流式与取消重试
+name: Tervell 0.19.141 Windows 原生验收
 on:
   workflow_dispatch:
   push:
@@ -6,10 +6,15 @@ on:
     paths: [.github/workflows/windows-139.yml]
 permissions:
   contents: read
+concurrency:
+  group: tervell-windows-141
+  cancel-in-progress: false
 jobs:
-  diagnose:
+  windows:
     runs-on: windows-2025
-    timeout-minutes: 15
+    timeout-minutes: 90
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
     steps:
       - uses: actions/setup-node@v4
         with:
@@ -17,39 +22,81 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.4
-      - name: 精确产品源码与仅增加诊断的测试
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 1.26.8
+          cache: false
+      - name: 固定源码摘要并核验全部文件
         shell: pwsh
         run: |
-          Invoke-WebRequest 'https://randomai.art/downloads/v0.19.141/Tervell-0.19.141-source.tar.gz' -OutFile source.tar.gz
-          if ((Get-FileHash source.tar.gz).Hash.ToLowerInvariant() -ne 'f3a9a503c6a6d04828ca825bd8d73aff1a5b1433cad97046c493208cab44f30d') { throw 'source hash mismatch' }
-          New-Item -ItemType Directory source | Out-Null
-          tar -xzf source.tar.gz -C source
+          $ErrorActionPreference = 'Stop'
+          $archive = Join-Path $env:RUNNER_TEMP 'tervell-source.tar.gz'
+          Invoke-WebRequest 'https://randomai.art/downloads/v0.19.141/Tervell-0.19.141-source.tar.gz' -OutFile $archive
+          if ((Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant() -ne 'f3a9a503c6a6d04828ca825bd8d73aff1a5b1433cad97046c493208cab44f30d') { throw 'source archive hash mismatch' }
+          New-Item -ItemType Directory -Force source | Out-Null
+          tar -xzf $archive -C source
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          Invoke-WebRequest 'https://randomai.art/downloads/v0.19.141/verify-acp-host-runtime-diagnostic.ts' -OutFile source/scripts/verify-acp-host-runtime.ts
-          if ((Get-FileHash source/scripts/verify-acp-host-runtime.ts).Hash.ToLowerInvariant() -ne 'a23e36ffe4cab6a8a98593a1dde6ce3361537a80975e2c99036b88143e7705c7') { throw 'test hash mismatch' }
-      - name: 原断言重试
+          Invoke-WebRequest 'https://randomai.art/downloads/v0.19.141/source-manifest.json' -OutFile source/qa-source-manifest.json
+          $manifest = Get-Content source/qa-source-manifest.json -Raw | ConvertFrom-Json
+          if ($manifest.archiveSha256 -ne 'f3a9a503c6a6d04828ca825bd8d73aff1a5b1433cad97046c493208cab44f30d' -or $manifest.version -ne '0.19.141') { throw 'manifest mismatch' }
+          foreach ($entry in $manifest.files) {
+            if ($entry.path -match '(^/|(^|/)\.\.(/|$)|:)') { throw 'unsafe manifest path' }
+            $file = Join-Path source $entry.path
+            if ((Get-FileHash $file -Algorithm SHA256).Hash.ToLowerInvariant() -ne $entry.sha256 -or (Get-Item $file).Length -ne $entry.bytes) { throw "source mismatch: $($entry.path)" }
+          }
+      - name: 固定依赖与安全回归
         working-directory: source
         shell: pwsh
         run: |
           bun install --frozen-lockfile
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          bun run gen:check
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          bun run typecheck
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          bun run --cwd apps/electron build:office-preview
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          bun test --isolate scripts/light-default.test.ts scripts/official-acp-peer.test.ts scripts/omp-launch-policy.test.ts scripts/omp-admission.test.ts scripts/probe-upgrade-recovery.test.ts scripts/acp-graceful-close.test.ts scripts/gateway-auth.test.ts scripts/managed-cli-retention.test.ts scripts/shared-cli-runtime.test.ts scripts/native-probe-isolation.test.ts
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: 准备原生运行时及网关
+        working-directory: source
+        shell: pwsh
+        run: |
           node apps/electron/scripts/prepare-windows-assets.cjs
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          New-Item -ItemType Directory -Force apps/electron/dist | Out-Null
-          node node_modules/esbuild/bin/esbuild scripts/verify-acp-host-runtime.ts --bundle --platform=node --format=cjs --external:electron --external:sharp --external:esbuild --external:@earendil-works/pi-coding-agent --external:@earendil-works/pi-agent-core --external:@earendil-works/pi-ai --outfile=apps/electron/dist/acp-host-runtime-verify.cjs
+          node apps/electron/scripts/build-windows-gateway.cjs
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          $env:TERVELL_QA_NODE_BIN=(Get-Command node.exe).Source
-          $env:TERVELL_QA_EVIDENCE_DIR=Join-Path $PWD 'evidence'
-          $electron=Join-Path $env:USERPROFILE '.cache/tervell/windows-build/electron-win32-x64/electron.exe'
-          New-Item -ItemType Directory -Force evidence | Out-Null
-          & $electron apps/electron/dist/acp-host-runtime-verify.cjs 2>&1 | Tee-Object -FilePath evidence/host.log
-          if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          if (-not (Test-Path evidence/acp-host-runtime.json)) { throw '缺少真实测试完成证据' }
-          if (-not (Get-Content evidence/acp-host-runtime.json -Raw | ConvertFrom-Json).ok) { throw '原断言未通过' }
-      - uses: actions/upload-artifact@v4
+          New-Item -ItemType Directory -Force apps/electron/resources/model-gateway | Out-Null
+          Copy-Item vendor/model-gateway/win32-x64/magpie.exe apps/electron/resources/model-gateway/magpie.exe
+      - name: 原生NSIS构建
+        working-directory: source
+        run: bun run --cwd apps/electron dist:alpha:win
+      - name: 原生安装与核心运行验收
+        working-directory: source
+        run: pwsh -File apps/electron/scripts/smoke-windows-install.ps1
+      - name: 保留流式15秒断言并分开初始化等待
+        working-directory: source
+        shell: pwsh
+        run: |
+          Invoke-WebRequest 'https://randomai.art/downloads/v0.19.141/verify-acp-host-runtime-diagnostic.ts' -OutFile scripts/verify-acp-host-runtime.ts
+          if ((Get-FileHash scripts/verify-acp-host-runtime.ts).Hash.ToLowerInvariant() -ne 'a23e36ffe4cab6a8a98593a1dde6ce3361537a80975e2c99036b88143e7705c7') { throw 'test hash mismatch' }
+      - name: 真实CLI工具与取消验收
+        working-directory: source
+        run: pwsh -File apps/electron/scripts/verify-windows-kernels.ps1
+      - name: 保存诊断与精确源码身份
         if: always()
+        uses: actions/upload-artifact@v4
         with:
-          name: acp-original-assertion-diagnostics
-          path: source/evidence/
+          name: windows-141-diagnostics
+          path: |
+            source/apps/electron/out/windows-alpha/native-smoke/
+            source/qa-source-manifest.json
+            source/scripts/verify-acp-host-runtime.ts
+          retention-days: 14
+      - name: 只交付全部步骤通过的安装包
+        uses: actions/upload-artifact@v4
+        with:
+          name: tervell-0.19.141-windows-x64-native
+          path: source/apps/electron/out/windows-alpha/*-setup.exe
           if-no-files-found: error
           retention-days: 14
